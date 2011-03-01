@@ -48,16 +48,10 @@ char *progname = "libtnat64";         	   /* Name used in err msgs    */
 #include <fcntl.h>
 #include <common.h>
 #include <stdarg.h>
-#ifdef USE_SOCKS_DNS
-#include <resolv.h>
-#endif
 #include <parser.h>
 #include <tsocks.h>
 
 /* Global Declarations */
-#ifdef USE_SOCKS_DNS
-static int (*realresinit)(void);
-#endif
 static int (*realconnect)(CONNECT_SIGNATURE);
 static int (*realselect)(SELECT_SIGNATURE);
 static int (*realpoll)(POLL_SIGNATURE);
@@ -73,9 +67,6 @@ int connect(CONNECT_SIGNATURE);
 int select(SELECT_SIGNATURE);
 int poll(POLL_SIGNATURE);
 int close(CLOSE_SIGNATURE);
-#ifdef USE_SOCKS_DNS
-int res_init(void);
-#endif
 
 /* Private Function Prototypes */
 static int get_config();
@@ -117,17 +108,11 @@ void _init(void) {
 	realselect = dlsym(RTLD_NEXT, "select");
 	realpoll = dlsym(RTLD_NEXT, "poll");
 	realclose = dlsym(RTLD_NEXT, "close");
-	#ifdef USE_SOCKS_DNS
-	realresinit = dlsym(RTLD_NEXT, "res_init");
-	#endif
 #else
 	lib = dlopen(LIBCONNECT, RTLD_LAZY);
 	realconnect = dlsym(lib, "connect");
 	realselect = dlsym(lib, "select");
 	realpoll = dlsym(lib, "poll");
-	#ifdef USE_SOCKS_DNS
-	realresinit = dlsym(lib, "res_init");
-	#endif
 	dlclose(lib);	
 
 	lib = dlopen(LIBC, RTLD_LAZY);
@@ -1157,25 +1142,6 @@ static int read_socksv4_req(struct connreq *conn) {
 
    return(0);
 }
-
-#ifdef USE_SOCKS_DNS
-int res_init(void) {
-        int rc;
-
-	if (realresinit == NULL) {
-		show_msg(MSGERR, "Unresolved symbol: res_init\n");
-		return(-1);
-	}
-        
-	/* Call normal res_init */
-	rc = realresinit();
-
-   /* Force using TCP protocol for DNS queries */
-   _res.options |= RES_USEVC;
-
-   return(rc);
-}
-#endif
 
 #if 0
 	/* Get the flags of the socket, (incase its non blocking */
