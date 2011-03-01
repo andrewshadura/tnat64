@@ -1,8 +1,8 @@
 /*
 
-    TSOCKS - Wrapper library for transparent SOCKS 
-
-    Copyright (C) 2000 Shaun Clowes 
+    TNAT64 - Wrapper library for redirecting IPv4 connections to NAT64
+    Copyright (C) 2011 Andrew O. Shadoura
+    Based on original code of TNAT64, copyright (C) 2000 Shaun Clowes
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,7 +28,7 @@
 #endif
 
 /* Global configuration variables */
-char *progname = "libtsocks";         	   /* Name used in err msgs    */
+char *progname = "libtnat64";         	   /* Name used in err msgs    */
 
 /* Header Files */
 #include <stdio.h>
