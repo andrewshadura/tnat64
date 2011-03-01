@@ -2,7 +2,7 @@
 
     TNAT64 - Wrapper library for redirecting IPv4 connections to NAT64
     Copyright (C) 2011 Andrew O. Shadoura
-    Based on original code of TNAT64, copyright (C) 2000 Shaun Clowes
+    Based on original code of TSOCKS, copyright (C) 2000 Shaun Clowes
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -117,9 +117,9 @@ static int get_environment()
 #ifndef ALLOW_MSG_OUTPUT
     set_log_options(-1, stderr, 0);
 #else
-    if ((env = getenv("TSOCKS_DEBUG")))
+    if ((env = getenv("TNAT64_DEBUG")))
         loglevel = atoi(env);
-    if (((env = getenv("TSOCKS_DEBUG_FILE"))) && !suid)
+    if (((env = getenv("TNAT64_DEBUG_FILE"))) && !suid)
         logfile = env;
     set_log_options(loglevel, logfile, 1);
 #endif
@@ -139,7 +139,7 @@ static int get_config()
     /* Determine the location of the config file */
 #ifdef ALLOW_ENV_CONFIG
     if (!suid)
-        conffile = getenv("TSOCKS_CONF_FILE");
+        conffile = getenv("TNAT64_CONF_FILE");
 #endif
 
     /* Read in the config file */
