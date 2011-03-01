@@ -14,13 +14,11 @@ includedir = @includedir@
 SHELL = /bin/sh
 MKINSTALLDIRS = ${SHELL} mkinstalldirs 
 SHCC = ${CC} -fPIC 
-INSPECT = inspectsocks
-SAVE = saveme
-LIB_NAME = libtsocks
+LIB_NAME = libtnat64
 COMMON = common
 PARSER = parser
 VALIDATECONF = validateconf
-SCRIPT = tsocks
+SCRIPT = tnat64
 SHLIB_MAJOR = 1
 SHLIB_MINOR = 8
 SHLIB = ${LIB_NAME}.so.${SHLIB_MAJOR}.${SHLIB_MINOR}
@@ -34,7 +32,7 @@ SPECIALLIBS = @SPECIALLIBS@
 
 SHOBJS = ${OBJS:.o=.so}
 
-OBJS= tsocks.o
+OBJS= tnat64.o
 
 TARGETS= ${SHLIB} ${UTIL_LIB} ${SAVE} ${INSPECT} ${VALIDATECONF}
 
@@ -42,12 +40,6 @@ all: ${TARGETS}
 
 ${VALIDATECONF}: ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o
 	${SHCC} ${CFLAGS} ${INCLUDES} -o ${VALIDATECONF} ${VALIDATECONF}.c ${COMMON}.o ${PARSER}.o ${LIBS}
-
-${INSPECT}: ${INSPECT}.c ${COMMON}.o
-	${SHCC} ${CFLAGS} ${INCLUDES} -o ${INSPECT} ${INSPECT}.c ${COMMON}.o ${LIBS} 
-
-${SAVE}: ${SAVE}.c
-	${SHCC} ${CFLAGS} ${INCLUDES} -static -o ${SAVE} ${SAVE}.c
 
 ${SHLIB}: ${OBJS} ${COMMON}.o ${PARSER}.o
 	${SHCC} ${CFLAGS} ${INCLUDES} -nostdlib -shared -o ${SHLIB} ${OBJS} ${COMMON}.o ${PARSER}.o ${DYNLIB_FLAGS} ${SPECIALLIBS} ${LIBS}
@@ -73,11 +65,11 @@ installlib:
 
 installman:
 	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man1"
-	${INSTALL_DATA} tsocks.1 ${DESTDIR}${mandir}/man1/
+	${INSTALL_DATA} tnat64.1 ${DESTDIR}${mandir}/man1/
 	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man8"
-	${INSTALL_DATA} tsocks.8 ${DESTDIR}${mandir}/man8/
+	${INSTALL_DATA} tnat64.8 ${DESTDIR}${mandir}/man8/
 	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man5"
-	${INSTALL_DATA} tsocks.conf.5 ${DESTDIR}${mandir}/man5/
+	${INSTALL_DATA} tnat64.conf.5 ${DESTDIR}${mandir}/man5/
 	
 clean:
 	-rm -f *.so *.so.* *.o *~ ${TARGETS}

@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-AC_INIT(saveme.c)
+AC_INIT(tnat64)
 AC_CONFIG_HEADER(config.h)
 
 dnl Our default prefix is /usr/ since most people will be using tsocks
@@ -12,25 +12,21 @@ dnl /etc/ld.so.preload file
 test "$libdir" = "\${exec_prefix}/lib" && libdir="/lib"
 
 dnl Arguments we allow
-AC_ARG_ENABLE(socksdns,
-[  --enable-socksdns	      force dns lookups to use tcp ])
 AC_ARG_ENABLE(debug,
 [  --disable-debug         disable ALL error messages from tsocks ])
 AC_ARG_ENABLE(oldmethod,
 [  --enable-oldmethod	   use the old method to override connect ])
-AC_ARG_ENABLE(hostnames,
-[  --disable-hostnames	   disable hostname lookups for socks servers ])
 AC_ARG_ENABLE(envconf,
-[  --disable-envconf       do not allow TSOCKS_CONF_FILE to specify configuration file ])
+[  --disable-envconf       do not allow TNAT64_CONF_FILE to specify configuration file ])
 AC_ARG_WITH(conf,
-[  --with-conf=<file>      location of configuration file (/etc/tsocks.conf default)],[
+[  --with-conf=<file>      location of configuration file (/etc/tnat64.conf default)],[
 if test "${withval}" = "yes" ; then
   AC_MSG_ERROR("--with-conf requires the location of the configuration file as an argument")
 else
   AC_DEFINE_UNQUOTED(CONF_FILE, "${withval}")
 fi
 ], [
-  AC_DEFINE_UNQUOTED(CONF_FILE, "/etc/tsocks.conf")
+  AC_DEFINE_UNQUOTED(CONF_FILE, "/etc/tnat64.conf")
 ])
 
 
@@ -154,10 +150,6 @@ AC_EGREP_CPP(yes,
   ])    
 ])
 
-if test "${enable_socksdns}" = "yes"; then
-  AC_DEFINE(USE_SOCKS_DNS)
-fi
-
 if test "x${enable_envconf}" = "x"; then
   AC_DEFINE(ALLOW_ENV_CONFIG)
 fi
@@ -169,15 +161,6 @@ fi
 
 if test "x${enable_debug}" = "x"; then
   AC_DEFINE(ALLOW_MSG_OUTPUT)
-fi
-
-if test "x${enable_hostnames}" = "x"; then
-  AC_DEFINE(HOSTNAMES)
-fi
-
-if test "${enable_socksdns}" = "yes" -a \
-        "x${enable_hostnames}" = "x" ; then
-  AC_MSG_ERROR("--enable-socksdns is not valid without --disable-hostnames")
 fi
 
 dnl If we have to use the old method of overriding connect (i.e no
