@@ -195,38 +195,10 @@ void show_server(struct parsedfile *config, struct serverent *server, int def)
 
     /* Show address */
     if (server->address != NULL)
-        printf("Server:       %s (%s)\n", server->address, ((res.s_addr = resolve_ip(server->address, 0, HOSTNAMES)) == -1 ? "Invalid!" : inet_ntoa(res)));
+        printf("NAT64 prefix:       %s\n", server->address);
     else
-        printf("Server:       ERROR! None specified\n");
+        printf("NAT64 prefix:       ERROR! None specified\n");
 
-    /* Check the server is on a local net */
-    if ((server->address != NULL) && (res.s_addr != -1) && (is_local(config, &res)))
-        fprintf(stderr, "Error: Server is not on a network " "specified as local\n");
-
-    /* Show port */
-    printf("Port:         %d\n", server->port);
-
-    /* Show SOCKS type */
-    printf("SOCKS type:   %d\n", server->type);
-
-    /* Show default username and password info */
-    if (server->type == 5)
-    {
-        /* Show the default user info */
-        printf("Default user: %s\n", (server->defuser == NULL) ? "Not Specified" : server->defuser);
-        printf("Default pass: %s\n", (server->defpass == NULL) ? "Not Specified" : "******** (Hidden)");
-        if ((server->defuser == NULL) && (server->defpass != NULL))
-            fprintf(stderr, "Error: Default user must be specified " "if default pass is specified\n");
-    }
-    else
-    {
-        if (server->defuser)
-            printf("Default user: %s\n", server->defuser);
-        if (server->defpass)
-            printf("Default pass: %s\n", server->defpass);
-        if ((server->defuser != NULL) || (server->defpass != NULL))
-            fprintf(stderr, "Error: Default user and password " "may only be specified for version 5 " "servers\n");
-    }
 
     /* If this is the default servers and it has reachnets, thats stupid */
     if (def)
