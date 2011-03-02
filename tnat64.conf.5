@@ -1,42 +1,41 @@
-.TH TSOCKS.CONF 5 "" "Shaun Clowes" \" -*-
+.TH TNAT64.CONF 5 "" "TNAT64" \" -*-
  \" nroff -*
 
 .SH NAME
-.BR tsocks.conf
-\- configuration file for tsocks(8)
+.BR tnat64.conf
+\- configuration file for tnat64(8)
 
 .SH OVERVIEW
 
-The configuration for tsocks can be anything from two lines to hundreds of 
+The configuration for tnat64 can be anything from two lines to hundreds of 
 lines based on the needs at any particular site. The basic idea is to define 
-any networks the machine can access directly (i.e without the use of a 
-SOCKS server) and define one or many SOCKS servers to be used to access
-other networks (including a 'default' server). 
+any networks the machine can access directly via IPv4
+and define one or many NAT64 prefixes to be used to access
+other networks (including a 'default' prefix).
 
 Local networks are declared using the 'local' keyword in the configuration 
 file. When applications attempt to connect to machines in networks marked
-as local tsocks will not attempt to use a SOCKS server to negotiate the 
-connection.
+as local tnat64 will not attempt to use a NAT64 prefix.
 
 Obviously if a connection is not to a locally accessible network it will need
-to be proxied over a SOCKS server. However, many installations have several
-different SOCKS servers to be used to access different internal (and external)
+to be proxied over a NAT64. However, sometimes you may need to use 
+different NAT64 prefixes to access different internal (and external)
 networks. For this reason the configuration file allows the definition of 
-'paths' as well as a default SOCKS server. 
+'paths' as well as a default NAT64 prefix.
 
 Paths are declared as blocks in the configuration file. That is, they begin
 with a 'path {' line in the configuration file and end with a '}' line. Inside
-this block directives should be used to declare a SOCKS server (as documented
-later in this manual page) and 'reaches' directives should be used to declare 
+this block directives should be used to declare a NAT64 proxy (as documented
+later in this manual page) and 'subnet' directives should be used to declare 
 networks and even destination ports in those networks that this server should 
-be used to reach. N.B Each path MUST define a SOCKS server and contain one or 
-more 'reaches' directives.
+be used to reach. Please note that each path MUST define a NAT64 prefix and 
+contain one or more 'subnet' directives.
 
-SOCKS server declaration directives that are not contained within a 'path' 
-block define the default SOCKS server. If tsocks needs to connect to a machine
-via a SOCKS server (i.e it isn't a network declared as 'local') and no 'path'
-has declared it can reach that network via a 'reaches' directive this server 
-is used to negotiate the connection. 
+NAT64 prefix declaration directives that are not contained within a 'path' 
+block define the default NAT64 prefix. If tnat64 needs to connect to a machine
+via a NAt64 (i.e it isn't a network declared as 'local') and no 'path'
+has declared it can reach that network via a 'subnet' directive,
+this NAT64 prefix is used to construct IPv6 addresses.
 
 .SH CONFIGURATION SYNTAX
 
@@ -60,83 +59,33 @@ Empty lines are ignored and all input on a line after a '#' character is
 ignored.
 
 .SS DIRECTIVES 
-The following directives are used in the tsocks configuration file:
+The following directives are used in the tnat64 configuration file:
 
 .TP
-.I server
-The IP address of the SOCKS server (e.g "server = 10.1.4.253"). Only one
-server may be specified per path block, or one outside a path
-block (to define the default server). Unless --disable-hostnames was 
-specified to configure at compile time the server can be specified as 
-a hostname (e.g "server = socks.nec.com") 
-
-.TP
-.I server_port
-The port on which the SOCKS server receives requests. Only one server_port
-may be specified per path block, or one outside a path (for the default
-server). This directive is not required if the server is on the
-standard port (1080).
-
-.TP
-.I server_type
-SOCKS version used by the server. Versions 4 and 5 are supported (but both
-for only the connect operation).  The default is 4. Only one server_type
-may be specified per path block, or one outside a path (for the default
-server). 
-
-You can use the inspectsocks utility to determine the type of server, see
-the 'UTILITIES' section later in this manual page.
-
-.TP
-.I default_user
-This specifies the default username to be used for username and password
-authentication in SOCKS version 5. In order to determine the username to
-use (if the socks server requires username and password authentication)
-tsocks first looks for the environment variable TSOCKS_USERNAME, then
-looks for this configuration option, then tries to get the local username.
-This option is not valid for SOCKS version 4 servers. Only one default_user 
-may be specified per path block, or one outside a path (for the default 
-server)
-
-.TP
-.I default_pass
-This specified the default password to be used for username and password
-authentication in SOCKS version 5. In order to determine the password to
-use (if the socks server requires username and password authentication)
-tsocks first looks for the environment variable TSOCKS_PASSWORD, then
-looks for this configuration option. This option is not valid for SOCKS
-version 4 servers. Onle one default_pass may be specified per path block, 
-or one outside a path (for the default server)
+.I nat64_prefix
+The prefix of IPv6 address of the NAT64 (e.g "nat64_prefix = 2001:bbb:aaaa:0:ddd:717::"). Only one
+NAT64 prefix may be specified per path block, or one outside a path
+block (to define the default NAT64 prefix).
 
 .TP
 .I local
-An IP/Subnet pair specifying a network which may be accessed directly without
-proxying through a SOCKS server (e.g "local = 10.0.0.0/255.0.0.0"). 
-Obviously all SOCKS server IP addresses must be in networks specified as 
-local, otherwise tsocks would need a SOCKS server to reach SOCKS servers.
+An IP/subnet pair specifying a network which may be accessed directly without
+proxying through NAT64 (e.g "local = 10.0.0.0/255.0.0.0"). 
 
 .TP
-.I reaches
+.I subnet
 This directive is only valid inside a path block. Its parameter is formed
-as IP[:startport[-endport]]/Subnet and it specifies a network (and a range
-of ports on that network) that can be accessed by the SOCKS server specified
-in this path block. For example, in a path block "reaches =
-150.0.0.0:80-1024/255.0.0.0" indicates to tsocks that the SOCKS server 
+as IP[:startport[\-endport]]/subnet and it specifies a network (and a range
+of ports on that network) that can be accessed by through NAT64 specified
+in this path block. For example, in a path block "subnet =
+150.0.0.0:80\-1024/255.0.0.0" indicates to tnat64 that the NAT64 prefix
 specified in the current path block should be used to access any IPs in the 
 range 150.0.0.0 to 150.255.255.255 when the connection request is for ports
-80-1024.
+80\-1024.
 
 .SH UTILITIES
-tsocks comes with two utilities that can be useful in creating and verifying
-the tsocks configuration file. 
-
-.TP
-inspectsocks
-inspectsocks can be used to determine the SOCKS version that a server supports.
-Inspectsocks takes as its arguments the ip address/hostname of the SOCKS
-server and optionally the port number for socks (e.g 'inspectsocks 
-socks.nec.com 1080'). It then inspects that server to attempt to determine 
-the version that server supports. 
+tnat64 comes with two utilities that can be useful in creating and verifying
+the tnat64 configuration file. 
 
 .TP
 validateconf
@@ -146,31 +95,36 @@ the configuration to the screen in a formatted, readable manner. This can be
 extremely useful in debugging problems.
 
 validateconf can read a configuration file from a location other than the 
-location specified at compile time with the -f <filename> command line 
+location specified at compile time with the \-f <filename> command line 
 option.
 
 Normally validateconf simply dumps the configuration read to the screen (in
 a nicely readable format), however it also has a useful 'test' mode. When
-passed a hostname/ip on the command line like -t <hostname/ip>, validateconf 
-determines which of the SOCKS servers specified in the configuration file 
-would be used by tsocks to access the specified host. 
+passed a hostname/ip on the command line like \-t <hostname/ip>, validateconf 
+determines which of the NAT64 prefixes specified in the configuration file 
+would be used by tnat64 to access the specified host. 
 
 .SH SEE ALSO
-tsocks(8)
+tnat64(8)
 
-.SH AUTHOR
+.SH AUTHORS
+Andrew O. Shadoura (bugzilla@tut.by),
 Shaun Clowes (delius@progsoc.uts.edu.au)
 
 .SH COPYRIGHT
-Copyright 2000 Shaun Clowes
+Copyright 2011 Andrew O. Shadoura
 
-tsocks and its documentation may be freely copied under the terms and
+Original tsocks manual page, copyright 2000 Shaun Clowes
+
+tnat64 and its documentation may be freely copied under the terms and
 conditions of version 2 of the GNU General Public License, as published
 by the Free Software Foundation (Cambridge, Massachusetts, United
 States of America).
 
-This documentation is based on the documentation for logwrites, another
+This documentation is heavily based on the documentation for tsocks, 
+transparent SOCKSification library, whose documentation itself 
+is based on the documentation for logwrites, another
 shared library interceptor. One line of code from it was used in
-tsocks and a lot of the documentation :) logwrites is by
+tnat64 and a lot of the documentation :) logwrites is by
 adam@yggdrasil.com (Adam J. Richter) and can be had from ftp.yggdrasil.com
 pub/dist/pkg
