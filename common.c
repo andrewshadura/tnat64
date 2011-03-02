@@ -25,7 +25,7 @@ char logfilename[256];          /* Name of file to which log messages should
 FILE *logfile = NULL;           /* File to which messages should be logged */
 int logstamp = 0;               /* Timestamp (and pid stamp) messages */
 
-unsigned int resolve_ip(char *host, int showmsg, int allownames)
+unsigned int __attribute__ ((visibility ("hidden"))) resolve_ip(char *host, int showmsg, int allownames)
 {
     struct hostent *new;
     unsigned int hostaddr;
@@ -71,7 +71,7 @@ unsigned int resolve_ip(char *host, int showmsg, int allownames)
 /*             be logged instead of to standard error           */
 /*  timestamp - This indicates that messages should be prefixed */
 /*              with timestamps (and the process id)            */
-void set_log_options(int level, char *filename, int timestamp)
+void __attribute__ ((visibility ("hidden"))) set_log_options(int level, char *filename, int timestamp)
 {
 
     loglevel = level;
@@ -87,7 +87,7 @@ void set_log_options(int level, char *filename, int timestamp)
     logstamp = timestamp;
 }
 
-void show_msg(int level, char *fmt, ...)
+void __attribute__ ((visibility ("hidden"))) show_msg(int level, char *fmt, ...)
 {
     va_list ap;
     int saveerr;

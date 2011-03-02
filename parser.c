@@ -28,7 +28,7 @@ static int handle_local(struct parsedfile *, int, char *);
 static int handle_prefix(struct parsedfile *, int, char *);
 static int make_netent(char *value, struct netent **ent);
 
-int read_config(char *filename, struct parsedfile *config)
+int __attribute__ ((visibility ("hidden"))) read_config(char *filename, struct parsedfile *config)
 {
     FILE *conf;
     char line[MAXLINE];
@@ -345,7 +345,7 @@ static int handle_local(struct parsedfile *config, int lineno, char *value)
 
 /* Construct a netent given a string like                             */
 /* "198.126.0.1[:portno[-portno]]/255.255.255.0"                      */
-int make_netent(char *value, struct netent **ent)
+int __attribute__ ((visibility ("hidden"))) make_netent(char *value, struct netent **ent)
 {
     char *ip;
     char *subnet;
@@ -446,7 +446,7 @@ int make_netent(char *value, struct netent **ent)
     return (0);
 }
 
-int is_local(struct parsedfile *config, struct in_addr *testip)
+int __attribute__ ((visibility ("hidden"))) is_local(struct parsedfile *config, struct in_addr *testip)
 {
     struct netent *ent;
 
@@ -462,7 +462,7 @@ int is_local(struct parsedfile *config, struct in_addr *testip)
 }
 
 /* Find the appropriate server to reach an ip */
-int pick_server(struct parsedfile *config, struct serverent **ent, struct in_addr *ip, unsigned int port)
+int __attribute__ ((visibility ("hidden"))) pick_server(struct parsedfile *config, struct serverent **ent, struct in_addr *ip, unsigned int port)
 {
     struct netent *net;
     char ipbuf[64];
@@ -503,7 +503,7 @@ int pick_server(struct parsedfile *config, struct serverent **ent, struct in_add
 /* the start pointer is set to be NULL. The difference between      */
 /* standard strsep and this function is that this one will          */
 /* set *separator to the character separator found if it isn't null */
-char *strsplit(char *separator, char **text, const char *search)
+char __attribute__ ((visibility ("hidden"))) *strsplit(char *separator, char **text, const char *search)
 {
     int len;
     char *ret;
