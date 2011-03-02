@@ -1,3 +1,7 @@
+2011-03-02  Andrew O. Shadoura  <bugzilla@tut.by>
+
+        * Got it working!
+
 2011-03-01  Andrew O. Shadoura  <bugzilla@tut.by>
 
         * First attempt to implement NAT64 wrapper,
