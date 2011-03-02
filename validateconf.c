@@ -40,7 +40,7 @@ char *progname = "validateconf";        /* Name for error msgs      */
 #include <common.h>
 #include <parser.h>
 
-void show_server(struct parsedfile *, struct serverent *, int);
+void show_prefix(struct parsedfile *, struct prefixent *, int);
 void show_conf(struct parsedfile *config);
 void test_host(struct parsedfile *config, char *);
 
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 void test_host(struct parsedfile *config, char *host)
 {
     struct in_addr hostaddr;
-    struct serverent *path;
+    struct prefixent *path;
     char *hostname, *port;
     char separator;
     unsigned long portno = 0;
@@ -128,16 +128,16 @@ void test_host(struct parsedfile *config, char *host)
         }
         else
         {
-            pick_server(config, &path, &hostaddr, portno);
-            if (path == &(config->defaultserver))
+            pick_prefix(config, &path, &hostaddr, portno);
+            if (path == &(config->defaultprefix))
             {
                 printf("Path is reached via default NAT64 prefix:\n");
-                show_server(config, path, 1);
+                show_prefix(config, path, 1);
             }
             else
             {
                 printf("Host is reached via this path:\n");
-                show_server(config, path, 0);
+                show_prefix(config, path, 0);
             }
         }
     }
@@ -148,7 +148,7 @@ void test_host(struct parsedfile *config, char *host)
 void show_conf(struct parsedfile *config)
 {
     struct netent *net;
-    struct serverent *server;
+    struct prefixent *prefix;
 
     /* Show the local networks */
     printf("=== Local networks (no NAT64 needed) ===\n");
@@ -161,11 +161,11 @@ void show_conf(struct parsedfile *config)
     }
     printf("\n");
 
-    /* If we have a default server configuration show it */
+    /* If we have a default prefix configuration show it */
     printf("=== Default NAT64 prefix configuration ===\n");
-    if ((config->defaultserver).address != NULL)
+    if ((config->defaultprefix).address != NULL)
     {
-        show_server(config, &(config->defaultserver), 1);
+        show_prefix(config, &(config->defaultprefix), 1);
     }
     else
     {
@@ -176,27 +176,26 @@ void show_conf(struct parsedfile *config)
     /* Now show paths */
     if ((config->paths) != NULL)
     {
-        server = (config->paths);
-        while (server != NULL)
+        prefix = (config->paths);
+        while (prefix != NULL)
         {
-            printf("=== Path (line no %d in configuration file)" " ===\n", server->lineno);
-            show_server(config, server, 0);
+            printf("=== Path (line no %d in configuration file)" " ===\n", prefix->lineno);
+            show_prefix(config, prefix, 0);
             printf("\n");
-            server = server->next;
+            prefix = prefix->next;
         }
     }
 
     return;
 }
 
-void show_server(struct parsedfile *config, struct serverent *server, int def)
+void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
 {
-    struct in_addr res;
     struct netent *net;
 
     /* Show address */
-    if (server->address != NULL)
-        printf("NAT64 prefix:       %s\n", server->address);
+    if (prefix->address != NULL)
+        printf("NAT64 prefix:       %s\n", prefix->address);
     else
         printf("NAT64 prefix:       ERROR! None specified\n");
 
@@ -204,21 +203,21 @@ void show_server(struct parsedfile *config, struct serverent *server, int def)
     /* If this is the default servers and it has reachnets, thats stupid */
     if (def)
     {
-        if (server->reachnets != NULL)
+        if (prefix->reachnets != NULL)
         {
             fprintf(stderr, "Error: The default NAT64 prefix has "
                     "specified networks it can be used to reach (subnet statements), "
                     "these statements are ignored since the " "default NAT64 prefix will be used for any network " "which is not specified in a subnet statement " "for other prefixes\n");
         }
     }
-    else if (server->reachnets == NULL)
+    else if (prefix->reachnets == NULL)
     {
         fprintf(stderr, "Error: No subnet statements specified for " "this NAT64 prefix, it will never be used\n");
     }
     else
     {
         printf("This NAT64 prefix can be used to reach:\n");
-        net = server->reachnets;
+        net = prefix->reachnets;
         while (net != NULL)
         {
             printf("Network: %15s ", inet_ntoa(net->localip));
