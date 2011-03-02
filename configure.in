@@ -246,7 +246,7 @@ AC_DEFINE_UNQUOTED(CONNECT_SIGNATURE, [${PROTO}])
 dnl Find the correct socket prototype on this machine 
 AC_MSG_CHECKING(for correct socket prototype)
 PROTO=
-PROTO1='int domain, int type, int protocol'
+PROTO1='int __domain, int __type, int __protocol'
 for testproto in "${PROTO1}" 
 do
   if test "${PROTO}" = ""; then

@@ -5700,7 +5700,7 @@ _ACEOF
 { $as_echo "$as_me:$LINENO: checking for correct socket prototype" >&5
 $as_echo_n "checking for correct socket prototype... " >&6; }
 PROTO=
-PROTO1='int domain, int type, int protocol'
+PROTO1='int __domain, int __type, int __protocol'
 for testproto in "${PROTO1}"
 do
   if test "${PROTO}" = ""; then
