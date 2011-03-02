@@ -130,7 +130,7 @@ void test_host(struct parsedfile *config, char *host)
             pick_server(config, &path, &hostaddr, portno);
             if (path == &(config->defaultserver))
             {
-                printf("Path is via default server:\n");
+                printf("Path is reached via default NAT64 prefix:\n");
                 show_server(config, path, 1);
             }
             else
@@ -150,25 +150,25 @@ void show_conf(struct parsedfile *config)
     struct serverent *server;
 
     /* Show the local networks */
-    printf("=== Local networks (no socks server needed) ===\n");
+    printf("=== Local networks (no NAT64 needed) ===\n");
     net = (config->localnets);
     while (net != NULL)
     {
         printf("Network: %15s ", inet_ntoa(net->localip));
-        printf("NetMask: %15s\n", inet_ntoa(net->localnet));
+        printf("Netmask: %15s\n", inet_ntoa(net->localnet));
         net = net->next;
     }
     printf("\n");
 
     /* If we have a default server configuration show it */
-    printf("=== Default Server Configuration ===\n");
+    printf("=== Default NAT64 prefix configuration ===\n");
     if ((config->defaultserver).address != NULL)
     {
         show_server(config, &(config->defaultserver), 1);
     }
     else
     {
-        printf("No default server specified, this is rarely a " "good idea\n");
+        printf("No default NAT64 prefix specified, this is rarely a " "good idea\n");
     }
     printf("\n");
 
@@ -205,23 +205,23 @@ void show_server(struct parsedfile *config, struct serverent *server, int def)
     {
         if (server->reachnets != NULL)
         {
-            fprintf(stderr, "Error: The default server has "
-                    "specified networks it can reach (reach statements), "
-                    "these statements are ignored since the " "default server will be tried for any network " "which is not specified in a reach statement " "for other servers\n");
+            fprintf(stderr, "Error: The default NAT64 prefix has "
+                    "specified networks it can be used to reach (subnet statements), "
+                    "these statements are ignored since the " "default NAT64 prefix will be used for any network " "which is not specified in a subnet statement " "for other prefixes\n");
         }
     }
     else if (server->reachnets == NULL)
     {
-        fprintf(stderr, "Error: No reach statements specified for " "server, this server will never be used\n");
+        fprintf(stderr, "Error: No subnet statements specified for " "this NAT64 prefix, it will never be used\n");
     }
     else
     {
-        printf("This server can be used to reach:\n");
+        printf("This NAT64 prefix can be used to reach:\n");
         net = server->reachnets;
         while (net != NULL)
         {
             printf("Network: %15s ", inet_ntoa(net->localip));
-            printf("NetMask: %15s ", inet_ntoa(net->localnet));
+            printf("Netmask: %15s ", inet_ntoa(net->localnet));
             if (net->startport)
                 printf("Ports: %5lu - %5lu", net->startport, net->endport);
             printf("\n");

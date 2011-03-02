@@ -272,10 +272,14 @@ static int handle_prefix(struct parsedfile *config, int lineno, char *value)
 
     ip = strsplit(NULL, &value, " ");
 
-    /* We don't verify this ip/hostname at this stage, */
-    /* its resolved immediately before use in tsocks.c */
     if (currentcontext->address == NULL)
+    {
         currentcontext->address = strdup(ip);
+        if (!inet_pton(AF_INET6, ip, &currentcontext->prefix))
+        {
+            show_msg(MSGERR, "Cannot parse NAT64 prefix " "specified at line %d in " "configuration file\n", lineno);
+        }
+    }
     else
     {
         if (currentcontext == &(config->defaultserver))
