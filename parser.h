@@ -7,14 +7,14 @@
 
 /* Structure definitions */
 
-/* Structure representing one server specified in the config */
-struct serverent
+/* Structure representing one NAT64 prefix specified in the config */
+struct prefixent
 {
     int lineno;                 /* Line number in conf file this path started on */
-    char *address;              /* Address/hostname of server */
-    struct in6_addr prefix; /* NAT64 prefix */
-    struct netent *reachnets;   /* Linked list of nets from this server */
-    struct serverent *next;     /* Pointer to next server entry */
+    char *address;              /* IPv6 address prefix in textual form */
+    struct in6_addr prefix;     /* the same, but in binary form */
+    struct netent *reachnets;   /* Linked list of nets from this preifx */
+    struct prefixent *next;     /* Pointer to next prefix entry */
 };
 
 /* Structure representing a network */
@@ -31,14 +31,14 @@ struct netent
 struct parsedfile
 {
     struct netent *localnets;
-    struct serverent defaultserver;
-    struct serverent *paths;
+    struct prefixent defaultprefix;
+    struct prefixent *paths;
 };
 
 /* Functions provided by parser module */
 int read_config(char *, struct parsedfile *);
 int is_local(struct parsedfile *, struct in_addr *);
-int pick_server(struct parsedfile *, struct serverent **, struct in_addr *, unsigned int port);
+int pick_prefix(struct parsedfile *, struct prefixent **, struct in_addr *, unsigned int port);
 char *strsplit(char *separator, char **text, const char *search);
 
 #endif

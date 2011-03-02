@@ -17,7 +17,7 @@
 
 /* Global configuration variables */
 #define MAXLINE         BUFSIZ  /* Max length of conf line  */
-static struct serverent *currentcontext = NULL;
+static struct prefixent *currentcontext = NULL;
 
 static int handle_line(struct parsedfile *, char *, int);
 static int tokenize(char *, int, char *[]);
@@ -34,13 +34,12 @@ int __attribute__ ((visibility ("hidden"))) read_config(char *filename, struct p
     char line[MAXLINE];
     int rc = 0;
     int lineno = 1;
-    struct serverent *server;
 
     /* Clear out the structure */
     memset(config, 0x0, sizeof(*config));
 
     /* Initialization */
-    currentcontext = &(config->defaultserver);
+    currentcontext = &(config->defaultprefix);
 
     /* If a filename wasn't provided, use the default */
     if (filename == NULL)
@@ -61,7 +60,7 @@ int __attribute__ ((visibility ("hidden"))) read_config(char *filename, struct p
     }
     else
     {
-        memset(&(config->defaultserver), 0x0, sizeof(config->defaultserver));
+        memset(&(config->defaultprefix), 0x0, sizeof(config->defaultprefix));
 
         while (NULL != fgets(line, MAXLINE, conf))
         {
@@ -171,32 +170,32 @@ static int tokenize(char *line, int arrsize, char *tokens[])
 
 static int handle_path(struct parsedfile *config, int lineno, int nowords, char *words[])
 {
-    struct serverent *newserver;
+    struct prefixent *newprefix;
 
     if ((nowords != 2) || (strcmp(words[1], "{")))
     {
         show_msg(MSGERR, "Badly formed path open statement on line %d " "in configuration file (should look like " "\"path {\")\n", lineno);
     }
-    else if (currentcontext != &(config->defaultserver))
+    else if (currentcontext != &(config->defaultprefix))
     {
         /* You cannot nest path statements so check that */
-        /* the current context is defaultserver          */
+        /* the current context is defaultprefix          */
         show_msg(MSGERR, "Path statements cannot be nested on line %d " "in configuration file\n", lineno);
     }
     else
     {
-        /* Open up a new serverent, put it on the list   */
+        /* Open up a new prefixent, put it on the list   */
         /* then set the current context                  */
-        if (((int)(newserver = (struct serverent *)malloc(sizeof(struct serverent)))) == -1)
+        if (((int)(newprefix = (struct prefixent *)malloc(sizeof(struct prefixent)))) == -1)
             exit(-1);
 
         /* Initialize the structure */
-        show_msg(MSGDEBUG, "New server structure from line %d in configuration file going " "to 0x%08x\n", lineno, newserver);
-        memset(newserver, 0x0, sizeof(*newserver));
-        newserver->next = config->paths;
-        newserver->lineno = lineno;
-        config->paths = newserver;
-        currentcontext = newserver;
+        show_msg(MSGDEBUG, "New prefix structure from line %d in configuration file going " "to 0x%08x\n", lineno, newprefix);
+        memset(newprefix, 0x0, sizeof(*newprefix));
+        newprefix->next = config->paths;
+        newprefix->lineno = lineno;
+        config->paths = newprefix;
+        currentcontext = newprefix;
     }
 
     return (0);
@@ -211,7 +210,7 @@ static int handle_endpath(struct parsedfile *config, int lineno, int nowords, ch
     }
     else
     {
-        currentcontext = &(config->defaultserver);
+        currentcontext = &(config->defaultprefix);
     }
 
     /* We could perform some checking on the validty of data in */
@@ -283,7 +282,7 @@ static int handle_prefix(struct parsedfile *config, int lineno, char *value)
     }
     else
     {
-        if (currentcontext == &(config->defaultserver))
+        if (currentcontext == &(config->defaultprefix))
             show_msg(MSGERR, "Only one default NAT64 prefix " "may be specified at line %d in " "configuration file\n", lineno);
         else
             show_msg(MSGERR, "Only one NAT64 prefix may be specified " "per path on line %d in configuration " "file. (Path begins on line %d)\n", lineno, currentcontext->lineno);
@@ -297,7 +296,7 @@ static int handle_local(struct parsedfile *config, int lineno, char *value)
     int rc;
     struct netent *ent;
 
-    if (currentcontext != &(config->defaultserver))
+    if (currentcontext != &(config->defaultprefix))
     {
         show_msg(MSGERR, "Local networks cannot be specified in path " "block at like %d in configuration file. " "(Path block started at line %d)\n", lineno, currentcontext->lineno);
         return (0);
@@ -461,27 +460,27 @@ int __attribute__ ((visibility ("hidden"))) is_local(struct parsedfile *config, 
     return (1);
 }
 
-/* Find the appropriate server to reach an ip */
-int __attribute__ ((visibility ("hidden"))) pick_server(struct parsedfile *config, struct serverent **ent, struct in_addr *ip, unsigned int port)
+/* Find the appropriate prefix to reach an ip */
+int __attribute__ ((visibility ("hidden"))) pick_prefix(struct parsedfile *config, struct prefixent **ent, struct in_addr *ip, unsigned int port)
 {
     struct netent *net;
     char ipbuf[64];
 
-    show_msg(MSGDEBUG, "Picking appropriate server for %s\n", inet_ntoa(*ip));
+    show_msg(MSGDEBUG, "Picking appropriate prefix for %s\n", inet_ntoa(*ip));
     *ent = (config->paths);
     while (*ent != NULL)
     {
-        /* Go through all the servers looking for one */
+        /* Go through all the prefixes looking for one */
         /* with a path to this network                */
-        show_msg(MSGDEBUG, "Checking SOCKS server %s\n", ((*ent)->address ? (*ent)->address : "(No Address)"));
+        show_msg(MSGDEBUG, "Checking NAT64 prefix %s\n", ((*ent)->address ? (*ent)->address : "(No Address)"));
         net = (*ent)->reachnets;
         while (net != NULL)
         {
             strcpy(ipbuf, inet_ntoa(net->localip));
-            show_msg(MSGDEBUG, "Server can reach %s/%s\n", ipbuf, inet_ntoa(net->localnet));
+            show_msg(MSGDEBUG, "%s/%s is reachable through this prefix\n", ipbuf, inet_ntoa(net->localnet));
             if (((ip->s_addr & net->localnet.s_addr) == (net->localip.s_addr & net->localnet.s_addr)) && (!net->startport || ((net->startport <= port) && (net->endport >= port))))
             {
-                show_msg(MSGDEBUG, "This server can reach target\n");
+                show_msg(MSGDEBUG, "The target is reachable\n");
                 /* Found the net, return */
                 return (0);
             }
@@ -490,7 +489,7 @@ int __attribute__ ((visibility ("hidden"))) pick_server(struct parsedfile *confi
         (*ent) = (*ent)->next;
     }
 
-    *ent = &(config->defaultserver);
+    *ent = &(config->defaultprefix);
 
     return (0);
 }

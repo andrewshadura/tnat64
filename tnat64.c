@@ -174,7 +174,7 @@ int connect(CONNECT_SIGNATURE)
     struct sockaddr_in6 dest_address6;
     int sock_type = -1;
     socklen_t sock_type_len = sizeof(sock_type);
-    struct serverent *path;
+    struct prefixent *path;
     int failed = 0;
 
     get_environment();
@@ -247,12 +247,12 @@ int connect(CONNECT_SIGNATURE)
         else
         {
             /* Ok, so its not local, we need a path to the net */
-            pick_server(config, &path, &(connaddr->sin_addr), ntohs(connaddr->sin_port));
+            pick_prefix(config, &path, &(connaddr->sin_addr), ntohs(connaddr->sin_port));
 
             show_msg(MSGDEBUG, "Picked prefix %s for connection\n", (path->address ? path->address : "(Not Provided)"));
             if (path->address == NULL)
             {
-                if (path == &(config->defaultserver))
+                if (path == &(config->defaultprefix))
                     show_msg(MSGERR, "Connection needs to be made " "via default prefix but " "the default prefix has not " "been specified\n");
                 else
                     show_msg(MSGERR, "Connection needs to be made " "via path specified at line " "%d in configuration file but " "the prefix has not been " "specified for this path\n", path->lineno);
@@ -297,24 +297,4 @@ int connect(CONNECT_SIGNATURE)
     return -1;
 }
 
-#if 0
-        /* Get the flags of the socket, (incase its non blocking */
-if ((sockflags = fcntl(sockid, F_GETFL)) == -1)
-{
-    sockflags = 0;
-}
 
-        /* If the flags show the socket as blocking, set it to   */
-        /* blocking for our connection to the socks server       */
-if ((sockflags & O_NONBLOCK) != 0)
-{
-    fcntl(sockid, F_SETFL, sockflags & (~(O_NONBLOCK)));
-}
-#endif
-#if 0
-        /* If the socket was in non blocking mode, restore that */
-if ((sockflags & O_NONBLOCK) != 0)
-{
-    fcntl(sockid, F_SETFL, sockflags);
-}
-#endif
