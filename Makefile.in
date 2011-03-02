@@ -75,4 +75,4 @@ clean:
 	-rm -f *.so *.so.* *.o *~ ${TARGETS}
 
 distclean: clean
-	-rm -f config.cache config.log config.h Makefile
+	-rm -f config.cache config.status config.log config.h Makefile
