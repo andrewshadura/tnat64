@@ -61,7 +61,7 @@ static char *conffile = NULL;
 
 static struct in6_addr ipv4mapped;
 
-static int current_af = AF_INET;
+static int current_af = AF_INET6;
 
 /* Exported Function Prototypes */
 void _init(void);
@@ -205,7 +205,7 @@ int connect(CONNECT_SIGNATURE)
     /* If we haven't initialized yet, do it now */
     get_config();
 
-    show_msg(MSGDEBUG, "Got connection request for socket %d to " "%s\n", __fd, inet_ntoa(connaddr->sin_addr));
+    show_msg(MSGDEBUG, "Got connection request for socket %d to " "%s:%d\n", __fd, inet_ntoa(connaddr->sin_addr), connaddr->sin_port);
 
     /* If the address is local call realconnect */
     if (!(is_local(config, &(connaddr->sin_addr))))
@@ -233,14 +233,17 @@ int connect(CONNECT_SIGNATURE)
 
             if (realconnect(__fd, (struct sockaddr *)&dest_address6, sizeof(struct sockaddr_in6)) == 0)
             {
+                show_msg(MSGDEBUG, "Success.\n");
                 return 0;
             }
             if (errno != ENETUNREACH)
             {
+                show_msg(MSGDEBUG, "Error: %d (%s)\n", errno, sys_errlist[errno]);
                 return -1;
             }
             else
             {
+                show_msg(MSGDEBUG, "Error: %d (%s)\n", errno, sys_errlist[errno]);
                 current_af = AF_INET6;
                 failed++;
             }
