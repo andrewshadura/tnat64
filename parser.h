@@ -12,7 +12,7 @@ struct serverent
 {
     int lineno;                 /* Line number in conf file this path started on */
     char *address;              /* Address/hostname of server */
-    struct sockaddr_in6 prefix; /* NAT64 prefix */
+    struct in6_addr prefix; /* NAT64 prefix */
     struct netent *reachnets;   /* Linked list of nets from this server */
     struct serverent *next;     /* Pointer to next server entry */
 };

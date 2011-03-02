@@ -51,6 +51,7 @@ int read_config(char *filename, struct parsedfile *config)
         filename = line;
     }
 
+    show_msg(MSGDEBUG, "Opening configuration file (%s)\n", filename);
     /* Read the configuration file */
     if ((conf = fopen(filename, "r")) == NULL)
     {
