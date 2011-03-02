@@ -49,7 +49,6 @@ char *progname = "libtnat64";   /* Name used in err msgs    */
 #include <common.h>
 #include <stdarg.h>
 #include <parser.h>
-#include <tsocks.h>
 
 /* Global Declarations */
 static int (*realsocket) (SOCKET_SIGNATURE);
