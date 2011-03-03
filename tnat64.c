@@ -51,6 +51,11 @@ char *progname = "libtnat64";   /* Name used in err msgs    */
 #include <stdarg.h>
 #include <parser.h>
 
+/* Mask which covers at least up to SOCK_MASK-1.  The
+ *  * remaining bits are used as flags.
+ *  per Linux kernel 2.6.* */
+#define SOCK_TYPE_MASK 0xf
+
 /* Global Declarations */
 static int (*realsocket) (SOCKET_SIGNATURE);
 static int (*realconnect) (CONNECT_SIGNATURE);
@@ -160,7 +165,7 @@ int socket(SOCKET_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: socket\n");
         return (-1);
     }
-    if ((__domain == AF_INET) && ((__type & 0xff) == SOCK_STREAM))
+    if ((__domain == AF_INET) && ((__type & SOCK_TYPE_MASK) == SOCK_STREAM))
     {
         return realsocket(AF_INET6, __type, __protocol);
     }
