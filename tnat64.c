@@ -95,6 +95,8 @@ void _init(void)
     dlclose(lib);
 #endif
     inet_pton(AF_INET6, "::ffff:0.0.0.0", &ipv4mapped);
+
+    get_environment();
 }
 
 static int get_environment()
@@ -177,8 +179,6 @@ int connect(CONNECT_SIGNATURE)
     socklen_t sock_type_len = sizeof(sock_type);
     struct prefixent *path;
     int failed = 0;
-
-    get_environment();
 
     /* If the real connect doesn't exist, we're stuffed */
     if (realconnect == NULL)
