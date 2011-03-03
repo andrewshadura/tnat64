@@ -160,7 +160,7 @@ int socket(SOCKET_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: socket\n");
         return (-1);
     }
-    if ((__domain == AF_INET) && (__type == SOCK_STREAM))
+    if ((__domain == AF_INET) && ((__type & 0xff) == SOCK_STREAM))
     {
         return realsocket(AF_INET6, __type, __protocol);
     }
