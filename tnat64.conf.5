@@ -63,9 +63,9 @@ The following directives are used in the tnat64 configuration file:
 
 .TP
 .I nat64_prefix
-The prefix of IPv6 address of the NAT64 (e.g "nat64_prefix = 2001:bbb:aaaa:0:ddd:717::"). Only one
+The prefix of IPv6 address of the NAT64 (e.g. "nat64_prefix = 64:ff9b::"). Only one
 NAT64 prefix may be specified per path block, or one outside a path
-block (to define the default NAT64 prefix).
+block (to define the default NAT64 prefix). The NAT64 prefix is always /96.
 
 .TP
 .I local
