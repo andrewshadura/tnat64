@@ -121,7 +121,7 @@ dnl Replace `main' with a function in -ldl:
 AC_CHECK_LIB(dl, dlsym,,AC_MSG_ERROR("libdl is required"))
 
 dnl If we're using gcc here define _GNU_SOURCE
-AC_MSG_CHECKING("for RTLD_NEXT from dlfcn.h")
+AC_MSG_CHECKING(for RTLD_NEXT from dlfcn.h)
 AC_EGREP_CPP(yes,
 [
  #include <dlfcn.h>
@@ -132,7 +132,7 @@ AC_EGREP_CPP(yes,
   AC_MSG_RESULT(yes)
 ], [
   AC_MSG_RESULT(no)
-  AC_MSG_CHECKING("for RTLD_NEXT from dlfcn.h with _GNU_SOURCE")
+  AC_MSG_CHECKING(for RTLD_NEXT from dlfcn.h with _GNU_SOURCE)
   AC_EGREP_CPP(yes,
   [
    #define _GNU_SOURCE
