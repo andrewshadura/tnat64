@@ -20,8 +20,8 @@ as local tnat64 will not attempt to use a NAT64 prefix.
 Obviously if a connection is not to a locally accessible network it will need
 to be proxied over a NAT64. However, sometimes you may need to use 
 different NAT64 prefixes to access different internal (and external)
-networks. For this reason the configuration file allows the definition of 
-'paths' as well as a default NAT64 prefix.
+networks. For this reason the configuration file allows the definition of 'paths'
+as well as a default NAT64 prefix.
 
 Paths are declared as blocks in the configuration file. That is, they begin
 with a 'path {' line in the configuration file and end with a '}' line. Inside
@@ -33,7 +33,7 @@ contain one or more 'subnet' directives.
 
 NAT64 prefix declaration directives that are not contained within a 'path' 
 block define the default NAT64 prefix. If tnat64 needs to connect to a machine
-via a NAt64 (i.e it isn't a network declared as 'local') and no 'path'
+via a NAT64 (i.e it isn't a network declared as 'local') and no 'path'
 has declared it can reach that network via a 'subnet' directive,
 this NAT64 prefix is used to construct IPv6 addresses.
 
