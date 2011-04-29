@@ -1,3 +1,10 @@
+2011-04-29  Andrew O. Shadoura  <bugzilla@tut.by>
+
+        * Version 0.02 released.
+        * getsockname(2) and getpeername(2) now intercepted, too;
+          that improves the compatibility with some software.
+        * Some bugs fixed.
+
 2011-04-19  Andrew O. Shadoura  <bugzilla@tut.by>
 
         * The first release: 0.01.
