@@ -262,6 +262,43 @@ fi
 AC_MSG_RESULT([socket(${PROTO})])
 AC_DEFINE_UNQUOTED(SOCKET_SIGNATURE, [${PROTO}])
 
+dnl Find the correct getpeername prototype on this machine 
+AC_MSG_CHECKING(for correct getpeername prototype)
+PROTO=
+PROTO1='int __fd, struct sockaddr * __addr, socklen_t * __len'
+for testproto in "${PROTO1}" 
+do
+  if test "${PROTO}" = ""; then
+    AC_TRY_COMPILE([
+      #include <sys/socket.h>
+      int getpeername($testproto);
+    ],,[PROTO="$testproto";],)
+  fi
+done
+if test "${PROTO}" = ""; then
+  AC_MSG_ERROR("no match found!")
+fi
+AC_MSG_RESULT([getpeername(${PROTO})])
+AC_DEFINE_UNQUOTED(GETPEERNAME_SIGNATURE, [${PROTO}])
+
+dnl Find the correct getsockname prototype on this machine 
+AC_MSG_CHECKING(for correct getsockname prototype)
+PROTO=
+PROTO1='int __fd, struct sockaddr * __addr, socklen_t * __len'
+for testproto in "${PROTO1}" 
+do
+  if test "${PROTO}" = ""; then
+    AC_TRY_COMPILE([
+      #include <sys/socket.h>
+      int getsockname($testproto);
+    ],,[PROTO="$testproto";],)
+  fi
+done
+if test "${PROTO}" = ""; then
+  AC_MSG_ERROR("no match found!")
+fi
+AC_MSG_RESULT([getsockname(${PROTO})])
+AC_DEFINE_UNQUOTED(GETSOCKNAME_SIGNATURE, [${PROTO}])
 
 dnl Pick which of the sockaddr type arguments we need for
 dnl connect(), we need to cast one of ours to it later 
