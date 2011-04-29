@@ -494,6 +494,44 @@ int __attribute__ ((visibility ("hidden"))) pick_prefix(struct parsedfile *confi
     return (0);
 }
 
+int HIDDENSYM check_prefix(struct parsedfile *config, struct in6_addr * addr)
+{
+    char ipbuf[64];
+    struct prefixent *ent;
+    char addrbuffer[INET6_ADDRSTRLEN];
+
+    if (inet_ntop(AF_INET6, addr, addrbuffer, sizeof(addrbuffer)))
+    {
+        show_msg(MSGDEBUG, "Checking if IPv6 address %s is behind the NAT64...\n", addrbuffer);
+    }
+    ent = (config->paths);
+    puts("!!!");
+    while (ent != NULL)
+    {
+        /* Go through all the prefixes */
+        show_msg(MSGDEBUG, "Checking NAT64 prefix %s\n", (ent->address ? ent->address : "(No Address)"));
+        if ((ent->address))
+        {
+            if (!memcmp(addr, &(ent->prefix), NAT64PREFIXLEN))
+            {
+                show_msg(MSGDEBUG, "Match!\n");
+                return 1;
+            }
+        }
+        ent = ent->next;
+    }
+
+    ent = &(config->defaultprefix);
+    show_msg(MSGDEBUG, "Checking the default NAT64 prefix %s\n", (ent->address ? ent->address : "(No Address)"));
+    if (!memcmp(addr, &(ent->prefix), NAT64PREFIXLEN))
+    {
+        show_msg(MSGDEBUG, "Match!\n");
+        return 1;
+    }
+
+    return 0;
+}
+
 /* This function is very much like strsep, it looks in a string for */
 /* a character from a list of characters, when it finds one it      */
 /* replaces it with a \0 and returns the start of the string        */

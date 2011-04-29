@@ -39,6 +39,7 @@ struct parsedfile
 int read_config(char *, struct parsedfile *);
 int is_local(struct parsedfile *, struct in_addr *);
 int pick_prefix(struct parsedfile *, struct prefixent **, struct in_addr *, unsigned int port);
+int check_prefix(struct parsedfile *config, struct in6_addr * addr);
 char *strsplit(char *separator, char **text, const char *search);
 
 #endif

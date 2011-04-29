@@ -38,6 +38,7 @@ char *progname = "libtnat64";   /* Name used in err msgs    */
 #include <dlfcn.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/poll.h>
 #include <string.h>
 #include <strings.h>
 #include <netinet/in.h>
@@ -59,6 +60,8 @@ char *progname = "libtnat64";   /* Name used in err msgs    */
 /* Global Declarations */
 static int (*realsocket) (SOCKET_SIGNATURE);
 static int (*realconnect) (CONNECT_SIGNATURE);
+static int (*realgetpeername) (GETPEERNAME_SIGNATURE);
+static int (*realgetsockname) (GETSOCKNAME_SIGNATURE);
 static struct parsedfile *config;
 static struct connreq *requests = NULL;
 static int suid = 0;
@@ -72,6 +75,8 @@ static int current_af = AF_INET6;
 void _init(void);
 int socket(SOCKET_SIGNATURE);
 int connect(CONNECT_SIGNATURE);
+int getpeername(GETPEERNAME_SIGNATURE);
+int getsockname(GETSOCKNAME_SIGNATURE);
 
 /* Private Function Prototypes */
 static int get_config();
@@ -93,10 +98,14 @@ void _init(void)
 #ifndef USE_OLD_DLSYM
     realconnect = dlsym(RTLD_NEXT, "connect");
     realsocket = dlsym(RTLD_NEXT, "socket");
+    realgetpeername = dlsym(RTLD_NEXT, "getpeername");
+    realgetsockname = dlsym(RTLD_NEXT, "getsockname");
 #else
     lib = dlopen(LIBCONNECT, RTLD_LAZY);
     realconnect = dlsym(lib, "connect");
     realsocket = dlsym(lib, "socket");
+    realgetpeername = dlsym(lib, "getpeername");
+    realgetsockname = dlsym(lib, "getsockname");
     dlclose(lib);
 #endif
     inet_pton(AF_INET6, "::ffff:0.0.0.0", &ipv4mapped);
@@ -178,7 +187,7 @@ int socket(SOCKET_SIGNATURE)
 int connect(CONNECT_SIGNATURE)
 {
     struct sockaddr_in *connaddr;
-    char addrbuffer[64];
+    char addrbuffer[INET6_ADDRSTRLEN];
     struct sockaddr_in6 dest_address6;
     int sock_type = -1;
     socklen_t sock_type_len = sizeof(sock_type);
@@ -230,7 +239,7 @@ int connect(CONNECT_SIGNATURE)
             dest_address6.sin6_flowinfo = 0;
             dest_address6.sin6_scope_id = 0;
             memcpy(&dest_address6.sin6_addr, &ipv4mapped, sizeof(struct in6_addr));
-            memcpy(&dest_address6.sin6_addr.s6_addr[12], &connaddr->sin_addr, sizeof(struct in_addr));
+            memcpy(&dest_address6.sin6_addr.s6_addr[NAT64PREFIXLEN], &connaddr->sin_addr, sizeof(struct in_addr));
             if (inet_ntop(AF_INET6, &dest_address6.sin6_addr, addrbuffer, sizeof(addrbuffer)))
             {
                 show_msg(MSGDEBUG, "Trying IPv4-mapped IPv6 address %s...\n", addrbuffer);
@@ -306,4 +315,79 @@ int connect(CONNECT_SIGNATURE)
     return -1;
 }
 
+int getpeername(GETPEERNAME_SIGNATURE)
+{
+    /* If the real getpeername doesn't exist, we're stuffed */
+    if (realgetpeername == NULL)
+    {
+        show_msg(MSGERR, "Unresolved symbol: getpeername\n");
+        return (-1);
+    }
+    struct sockaddr_in6 realpeer;
+    socklen_t needlen;
+    socklen_t realpeerlen = sizeof(realpeer);
+    int ret = realgetpeername(__fd, __addr, &needlen);
+    struct sockaddr_in * result;
+    if (*__len < sizeof(struct sockaddr_in))
+    {
+        *__len = sizeof(struct sockaddr_in);
+        errno = EINVAL;
+        return -1;
+    }
+    printf("*__len=%d\n", *__len);
+    if (__addr->sa_family == AF_INET6)
+    {
+        int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
+        if ((!memcmp(&realpeer.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realpeer.sin6_addr)))
+        {
+            result = (struct sockaddr_in *)__addr;
+            result->sin_family = AF_INET;
+            result->sin_port = realpeer.sin6_port;
+            memcpy(&result->sin_addr, &realpeer.sin6_addr.s6_addr[12], sizeof(struct in_addr));
+            *__len = sizeof(struct sockaddr_in);
+            return ret;
+        }
+    }
+    return ret;
+}
+
+int getsockname(GETSOCKNAME_SIGNATURE)
+{
+    /* If the real getsockname doesn't exist, we're stuffed */
+    if (realgetsockname == NULL)
+    {
+        show_msg(MSGERR, "Unresolved symbol: getsockname\n");
+        return (-1);
+    }
+    if (realgetpeername == NULL)
+    {
+        show_msg(MSGERR, "Unresolved symbol: getpeername\n");
+        return (-1);
+    }
+    struct sockaddr_in6 realpeer;
+    socklen_t needlen;
+    socklen_t realpeerlen = sizeof(realpeer);
+    int ret = realgetsockname(__fd, __addr, &needlen);
+    struct sockaddr_in * result;
+    if (*__len < sizeof(struct sockaddr_in))
+    {
+        *__len = sizeof(struct sockaddr_in);
+        errno = EINVAL;
+        return -1;
+    }
+    if (__addr->sa_family == AF_INET6)
+    {
+        int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
+        if ((!memcmp(&realpeer.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realpeer.sin6_addr)))
+        {
+            result = (struct sockaddr_in *)__addr;
+            result->sin_family = AF_INET;
+            result->sin_port = 0;
+            memset(&result->sin_addr, 0, sizeof(struct in_addr));
+            *__len = sizeof(struct sockaddr_in);
+            return ret;
+        }
+    }
+    return ret;
+}
 
