@@ -334,7 +334,6 @@ int getpeername(GETPEERNAME_SIGNATURE)
         errno = EINVAL;
         return -1;
     }
-    printf("*__len=%d\n", *__len);
     if (__addr->sa_family == AF_INET6)
     {
         int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
