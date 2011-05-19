@@ -505,7 +505,6 @@ int HIDDENSYM check_prefix(struct parsedfile *config, struct in6_addr * addr)
         show_msg(MSGDEBUG, "Checking if IPv6 address %s is behind the NAT64...\n", addrbuffer);
     }
     ent = (config->paths);
-    puts("!!!");
     while (ent != NULL)
     {
         /* Go through all the prefixes */
