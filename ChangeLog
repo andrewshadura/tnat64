@@ -1,3 +1,10 @@
+2011-05-19  Andrew O. Shadoura  <bugzilla@tut.by>
+
+        * Version 0.03 released.
+        * X11 compatibility (get*name functions now work properly).
+        * Crash on wrong function calls order fixed.
+        * Better debug facilities.
+
 2011-04-29  Andrew O. Shadoura  <bugzilla@tut.by>
 
         * Version 0.02 released.
