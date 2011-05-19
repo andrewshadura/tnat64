@@ -340,7 +340,7 @@ int getpeername(GETPEERNAME_SIGNATURE)
     }
     show_msg(MSGDEBUG, "Got getpeername call for socket %d\n", __fd);
     struct sockaddr_in6 realpeer;
-    socklen_t needlen;
+    socklen_t needlen = __len;
     socklen_t realpeerlen = sizeof(realpeer);
     int ret = realgetpeername(__fd, __addr, &needlen);
     struct sockaddr_in * result;
@@ -383,7 +383,7 @@ int getsockname(GETSOCKNAME_SIGNATURE)
     }
     show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
     struct sockaddr_in6 realpeer;
-    socklen_t needlen;
+    socklen_t needlen = __len;
     socklen_t realpeerlen = sizeof(realpeer);
     int ret = realgetsockname(__fd, __addr, &needlen);
     struct sockaddr_in * result;
