@@ -315,6 +315,21 @@ int connect(CONNECT_SIGNATURE)
     return -1;
 }
 
+static char afs[][16] = {
+    "AF_UNSPEC",
+    "AF_UNIX",
+    "AF_FILE",
+    "AF_INET",
+    "AF_AX25",
+    "AF_IPX",
+    "AF_APPLETALK",
+    "AF_NETROM",
+    "AF_BRIDGE",
+    "AF_ATMPVC",
+    "AF_X25",
+    "AF_INET6"
+};
+
 int getpeername(GETPEERNAME_SIGNATURE)
 {
     /* If the real getpeername doesn't exist, we're stuffed */
@@ -323,6 +338,7 @@ int getpeername(GETPEERNAME_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: getpeername\n");
         return (-1);
     }
+    show_msg(MSGDEBUG, "Got getpeername call for socket %d\n", __fd);
     struct sockaddr_in6 realpeer;
     socklen_t needlen;
     socklen_t realpeerlen = sizeof(realpeer);
@@ -334,6 +350,8 @@ int getpeername(GETPEERNAME_SIGNATURE)
         errno = EINVAL;
         return -1;
     }
+    if (__addr->sa_family <= 10)
+        show_msg(MSGDEBUG, "Address family is %s\n", afs[__addr->sa_family]);
     if (__addr->sa_family == AF_INET6)
     {
         int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
@@ -363,6 +381,7 @@ int getsockname(GETSOCKNAME_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: getpeername\n");
         return (-1);
     }
+    show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
     struct sockaddr_in6 realpeer;
     socklen_t needlen;
     socklen_t realpeerlen = sizeof(realpeer);
@@ -374,6 +393,8 @@ int getsockname(GETSOCKNAME_SIGNATURE)
         errno = EINVAL;
         return -1;
     }
+    if (__addr->sa_family <= 10)
+        show_msg(MSGDEBUG, "Address family is %s\n", afs[__addr->sa_family]);
     if (__addr->sa_family == AF_INET6)
     {
         int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
