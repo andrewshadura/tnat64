@@ -338,6 +338,10 @@ int getpeername(GETPEERNAME_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: getpeername\n");
         return (-1);
     }
+
+    /* If we haven't initialized yet, do it now */
+    get_config();
+
     show_msg(MSGDEBUG, "Got getpeername call for socket %d\n", __fd);
     struct sockaddr_in6 realpeer;
     socklen_t needlen = *__len;
@@ -381,6 +385,10 @@ int getsockname(GETSOCKNAME_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: getpeername\n");
         return (-1);
     }
+
+    /* If we haven't initialized yet, do it now */
+    get_config();
+
     show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
     struct sockaddr_in6 realpeer;
     socklen_t needlen = *__len;
