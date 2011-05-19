@@ -318,7 +318,6 @@ int connect(CONNECT_SIGNATURE)
 static char afs[][16] = {
     "AF_UNSPEC",
     "AF_UNIX",
-    "AF_FILE",
     "AF_INET",
     "AF_AX25",
     "AF_IPX",
