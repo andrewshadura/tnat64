@@ -60,8 +60,7 @@ installscript:
 installlib:
 	${MKINSTALLDIRS} "${DESTDIR}${libdir}"
 	${INSTALL} ${SHLIB} ${DESTDIR}${libdir}
-	ln -sf ${SHLIB} ${DESTDIR}${libdir}/${LIB_NAME}.so.${SHLIB_MAJOR}
-	ln -sf ${LIB_NAME}.so.${SHLIB_MAJOR} ${DESTDIR}${libdir}/${LIB_NAME}.so
+	ln -sf ${SHLIB} ${DESTDIR}${libdir}/${LIB_NAME}.so
 
 installman:
 	${MKINSTALLDIRS} "${DESTDIR}${mandir}/man1"
