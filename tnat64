@@ -46,14 +46,14 @@ case "$1" in
 	on)
 		if [ -z "$LD_PRELOAD" ]
 			then
-				export LD_PRELOAD="/usr/lib/libtnat64.so"
+				export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so"
 			else
-				echo $LD_PRELOAD | grep -q "/usr/lib/libtnat64\.so" || \
-				export LD_PRELOAD="/usr/lib/libtnat64.so $LD_PRELOAD"
+				echo $LD_PRELOAD | grep -q "/usr/lib/tnat64/libtnat64\.so" || \
+				export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so $LD_PRELOAD"
 		fi
 	;;
 	off)
-		export LD_PRELOAD=`echo -n $LD_PRELOAD | sed 's/\/usr\/lib\/libtnat64.so \?//'`
+		export LD_PRELOAD=`echo -n $LD_PRELOAD | sed 's/\/usr\/lib\/tnat64\/libtnat64.so \?//'`
 		if [ -z "$LD_PRELOAD" ]
 			then
 				unset LD_PRELOAD
@@ -68,10 +68,10 @@ case "$1" in
 	*)
 		if [ -z "$LD_PRELOAD" ]
 		then
-			export LD_PRELOAD="/usr/lib/libtnat64.so"
+			export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so"
 		else
-			echo $LD_PRELOAD | grep -q "/usr/lib/libtnat64\.so" || \
-			export LD_PRELOAD="/usr/lib/libtnat64.so $LD_PRELOAD"
+			echo $LD_PRELOAD | grep -q "/usr/lib/tnat64/libtnat64\.so" || \
+			export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so $LD_PRELOAD"
 		fi
 
 		if [ $# = 0 ]
