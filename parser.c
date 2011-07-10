@@ -1,6 +1,6 @@
 /*
 
-   parser.c    - Parsing routines for tsocks.conf
+   parser.c    - Parsing routines for tnat64.conf
 
 */
 
