@@ -1,6 +1,6 @@
 /*
 
-    commmon.c    - Common routines for the tsocks package 
+    commmon.c    - Common routines for the tnat64 package 
 
 */
 
