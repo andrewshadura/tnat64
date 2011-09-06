@@ -461,7 +461,7 @@ int HIDDENSYM is_local(struct parsedfile *config, struct in_addr *testip)
 }
 
 /* Find the appropriate prefix to reach an ip */
-int HIDDENSYM pick_prefix(struct parsedfile *config, struct prefixent **ent, struct in_addr *ip, unsigned int port)
+int HIDDENSYM pick_prefix(struct parsedfile *config, struct prefixent **ent, struct in_addr *ip, uint16_t port)
 {
     struct netent *net;
     char ipbuf[64];
