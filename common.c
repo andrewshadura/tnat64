@@ -20,7 +20,7 @@
 /* Globals */
 int loglevel = MSGERR;          /* The default logging level is to only log
                                    error messages */
-char logfilename[256];          /* Name of file to which log messages should
+char *logfilename = NULL;       /* Name of file to which log messages should
                                    be redirected */
 FILE *logfile = NULL;           /* File to which messages should be logged */
 int logstamp = 0;               /* Timestamp (and pid stamp) messages */
@@ -80,8 +80,7 @@ void HIDDENSYM set_log_options(int level, char *filename, int timestamp)
 
     if (filename)
     {
-        strncpy(logfilename, filename, sizeof(logfilename));
-        logfilename[sizeof(logfilename) - 1] = '\0';
+        logfilename = strdup(filename);
     }
 
     logstamp = timestamp;
@@ -100,7 +99,7 @@ void HIDDENSYM show_msg(int level, char *fmt, ...)
 
     if (!logfile)
     {
-        if (logfilename[0])
+        if (logfilename)
         {
             logfile = fopen(logfilename, "a");
             if (logfile == NULL)

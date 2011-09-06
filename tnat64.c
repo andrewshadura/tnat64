@@ -117,7 +117,7 @@ static int get_environment()
 {
     static int done = 0;
     int loglevel = MSGERR;
-    char *logfile = NULL;
+    char *logfilename = NULL;
     char *env;
 
     if (done)
@@ -125,13 +125,13 @@ static int get_environment()
 
     /* Determine the logging level */
 #ifndef ALLOW_MSG_OUTPUT
-    set_log_options(-1, stderr, 0);
+    set_log_options(MSGNONE, NULL, 0);
 #else
     if ((env = getenv("TNAT64_DEBUG")))
         loglevel = atoi(env);
     if (((env = getenv("TNAT64_DEBUG_FILE"))) && !suid)
-        logfile = env;
-    set_log_options(loglevel, logfile, 1);
+        logfilename = env;
+    set_log_options(loglevel, logfilename, 1);
 #endif
 
     done = 1;
