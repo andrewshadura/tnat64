@@ -53,7 +53,7 @@ case "$1" in
 		fi
 	;;
 	off)
-		export LD_PRELOAD=`echo -n $LD_PRELOAD | sed 's/\/usr\/lib\/tnat64\/libtnat64.so \?//'`
+		export LD_PRELOAD=$(echo -n $LD_PRELOAD | sed 's:/usr/lib/tnat64/libtnat64.so \?::')
 		if [ -z "$LD_PRELOAD" ]
 			then
 				unset LD_PRELOAD
