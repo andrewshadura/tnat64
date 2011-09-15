@@ -15,11 +15,11 @@ specified below:
  
 Bash, Ksh and Bourne shell \-
 
-export LD_PRELOAD=/lib/libtnat64.so
+export LD_PRELOAD=@pkglibdir@/libtnat64.so
 
 C Shell \- 
 
-setenv LD_PRELOAD=/lib/libtnat64.so
+setenv LD_PRELOAD=@pkglibdir@/libtnat64.so
 
 This process can be automated (for Bash, Bourne and Korn shell 
 users) for a single command or for all commands in a shell session
@@ -37,7 +37,7 @@ is a library to allow IPv4-only application to access IPv4 hosts on
 IPv6-only systems by using NAT64. It wraps the normal
 connect() function. When a connection is attempted, it consults the 
 configuration file (which is defined at configure time but defaults to 
-/etc/tnat64.conf) and determines if the IP address specified is local. If 
+@CONF_FILE@) and determines if the IP address specified is local. If 
 it is not, the library redirects the connection to an IPv6 address inside 
 the NAT64 prefix that is specified in the configuration file. The 
 redirection is performed only if the destination host is unreachable 
@@ -60,7 +60,7 @@ Most arguments to
 .BR tnat64
 are provided in the configuration file (the location of which is defined
 at configure time by the \-\-with-conf=<file> argument but defaults to
-/etc/tnat64.conf). The structure of this file is documented in tnat64.conf(8)
+@CONF_FILE@). The structure of this file is documented in tnat64.conf(8)
 
 Some configuration options can be specified at run time using environment
 variables as follows: 
@@ -134,7 +134,7 @@ executables that make system calls directly with the system call trap or
 through the syscall() routine.
 
 .SH FILES
-/etc/tnat64.conf - default tnat64 configuration file
+@CONF_FILE@ - default tnat64 configuration file
 
 .SH SEE ALSO
 tnat64.conf(5)

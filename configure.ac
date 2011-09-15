@@ -1,10 +1,21 @@
-dnl Process this file with autoconf to produce a configure script.
-AC_INIT(tnat64)
-AC_CONFIG_HEADER(config.h)
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.68])
+
+AC_INIT([tnat64],[0.04],[],[],[http://bitbucket.org/andrew_shadoura/tnat64/])
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_SRCDIR([tnat64.c])
+
+AM_INIT_AUTOMAKE([foreign])
+LT_INIT
+AM_PROG_CC_C_O
+
+AC_CONFIG_HEADERS([config.h])
 
 dnl Our default prefix is /usr/ since most people will be using tsocks
 dnl on Linux systems and that /usr/local/ stuff annoys them
-AC_PREFIX_DEFAULT(/usr)
+AC_PREFIX_DEFAULT([/usr])
 
 dnl if libdir hasn't been set by the user default it to /lib since
 dnl tsocks needs to be on the root partition if put in the
@@ -23,12 +34,13 @@ AC_ARG_WITH(conf,
 if test "${withval}" = "yes" ; then
   AC_MSG_ERROR("--with-conf requires the location of the configuration file as an argument")
 else
-  AC_DEFINE_UNQUOTED(CONF_FILE, "${withval}")
+  CONF_FILE=${withval}
 fi
 ], [
-  AC_DEFINE_UNQUOTED(CONF_FILE, "/etc/tnat64.conf")
+  CONF_FILE=/etc/tnat64.conf
 ])
-
+AC_DEFINE_UNQUOTED(CONF_FILE,["${CONF_FILE}"],[Location of configuration file (typically /etc/tnat64.conf)])
+AC_SUBST(CONF_FILE)
 
 dnl -----------------------------------
 dnl Get hostname and other information.
@@ -36,7 +48,6 @@ dnl -----------------------------------
 AC_CANONICAL_HOST
 
 dnl Checks for programs.
-AC_PROG_CC
 AC_PROG_INSTALL
 AC_PROG_LN_S
 
@@ -44,7 +55,7 @@ dnl Check if the C compiler accepts -Wall
 AC_MSG_CHECKING("if the C compiler accepts -Wall")
 OLDCFLAGS="$CFLAGS"
 CFLAGS="$CFLAGS -Wall"
-AC_TRY_COMPILE(,,AC_MSG_RESULT(yes),[
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[AC_MSG_RESULT(yes)],[
    CFLAGS="$OLDCFLAGS"
    AC_MSG_RESULT(no)])
 
@@ -67,11 +78,16 @@ dnl Check for the poll header
 AC_CHECK_HEADER(sys/poll.h,,AC_MSG_ERROR("sys/poll.h not found"))
 
 dnl Other headers we're interested in
-AC_CHECK_HEADERS(unistd.h)
 
-dnl Checks for library functions.
-AC_CHECK_FUNCS(strcspn strdup strerror strspn strtol,,[ 
-	       AC_MSG_ERROR("Required function not found")])
+# Checks for header files.
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netdb.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h unistd.h])
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_CHECK_FUNCS([gethostbyname inet_ntoa memset socket strcspn strdup strerror strspn strtol])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_UINT16_T
 
 dnl First find the library that contains connect() (obviously
 dnl the most important library for us). Once we've found it
@@ -98,6 +114,8 @@ AC_CHECK_FUNC(socket,, [
 
 dnl Check for a function to convert an ascii ip address
 dnl to a sin_addr. 
+AH_TEMPLATE(HAVE_INET_ADDR,[Work out which function we have for conversion from string IPs to numerical ones])
+AH_TEMPLATE(HAVE_INET_ATON,[Work out which function we have for conversion from string IPs to numerical ones])
 AC_CHECK_FUNC(inet_aton, AC_DEFINE(HAVE_INET_ATON), [
   AC_CHECK_FUNC(inet_addr, AC_DEFINE(HAVE_INET_ADDR), [
     AC_CHECK_LIB(nsl, inet_addr, [ AC_DEFINE(HAVE_INET_ADDR)
@@ -122,6 +140,7 @@ AC_CHECK_LIB(dl, dlsym,,AC_MSG_ERROR("libdl is required"))
 
 dnl If we're using gcc here define _GNU_SOURCE
 AC_MSG_CHECKING(for RTLD_NEXT from dlfcn.h)
+AH_TEMPLATE(USE_GNU_SOURCE,[Use _GNU_SOURCE to define RTLD_NEXT, mostly for RH7 systems])
 AC_EGREP_CPP(yes,
 [
  #include <dlfcn.h>
@@ -150,15 +169,18 @@ AC_EGREP_CPP(yes,
   ])    
 ])
 
+AH_TEMPLATE(ALLOW_ENV_CONFIG,[Allow TSOCKS_CONF_FILE in environment to specify config file location])
 if test "x${enable_envconf}" = "x"; then
   AC_DEFINE(ALLOW_ENV_CONFIG)
 fi
 
+AH_TEMPLATE(USE_OLD_DLSYM,,[dlopen() the old libc to get connect() instead of RTLD_NEXT, hopefully shouldn't be needed])
 if test "${enable_oldmethod}" = "yes"; then
   AC_DEFINE(USE_OLD_DLSYM)
   oldmethod="yes"
 fi
 
+AH_TEMPLATE(ALLOW_MSG_OUTPUT,[Allow tsocks to generate messages to stderr when errors are encountered, this is really important and should only be disabled if you're REALLY sure. It can also be turned off at run time, see the man page for details])
 if test "x${enable_debug}" = "x"; then
   AC_DEFINE(ALLOW_MSG_OUTPUT)
 fi
@@ -194,7 +216,7 @@ if test "${oldmethod}" = "yes"; then
     fi
   done
 
-  AC_DEFINE_UNQUOTED(LIBCONNECT, "${LIBCONNECT}")
+  AC_DEFINE_UNQUOTED(LIBCONNECT, "${LIBCONNECT}",[path to library containing connect(), needed if USE_OLD_DLSYM is enabled])
   if test "${LIBCONNECT}" = ""; then
      AC_MSG_ERROR("not found!")
   fi
@@ -210,7 +232,7 @@ if test "${oldmethod}" = "yes"; then
     fi
   done
 
-  AC_DEFINE_UNQUOTED(LIBC, "${LIBC}")
+  AC_DEFINE_UNQUOTED(LIBC, "${LIBC}",[path to libc, needed if USE_OLD_DLSYM is enabled])
   if test "${LIBC}" = ""; then
      AC_MSG_ERROR("not found!")
   fi
@@ -231,17 +253,17 @@ for testproto in "${PROTO1}" \
                  "${PROTO4}" 
 do
   if test "${PROTO}" = ""; then
-    AC_TRY_COMPILE([
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
       #include <sys/socket.h>
       int connect($testproto);
-    ],,[PROTO="$testproto";],)
+    ]], [[]])],[PROTO="$testproto";],[])
   fi
 done
 if test "${PROTO}" = ""; then
   AC_MSG_ERROR("no match found!")
 fi
 AC_MSG_RESULT([connect(${PROTO})])
-AC_DEFINE_UNQUOTED(CONNECT_SIGNATURE, [${PROTO}])
+AC_DEFINE_UNQUOTED(CONNECT_SIGNATURE, [${PROTO}],[Prototype and function header for connect function])
 
 dnl Find the correct socket prototype on this machine 
 AC_MSG_CHECKING(for correct socket prototype)
@@ -250,17 +272,17 @@ PROTO1='int __domain, int __type, int __protocol'
 for testproto in "${PROTO1}" 
 do
   if test "${PROTO}" = ""; then
-    AC_TRY_COMPILE([
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
       #include <sys/socket.h>
       int socket($testproto);
-    ],,[PROTO="$testproto";],)
+    ]], [[]])],[PROTO="$testproto";],[])
   fi
 done
 if test "${PROTO}" = ""; then
   AC_MSG_ERROR("no match found!")
 fi
 AC_MSG_RESULT([socket(${PROTO})])
-AC_DEFINE_UNQUOTED(SOCKET_SIGNATURE, [${PROTO}])
+AC_DEFINE_UNQUOTED(SOCKET_SIGNATURE, [${PROTO}],[Prototype and function header for socket function])
 
 dnl Find the correct getpeername prototype on this machine 
 AC_MSG_CHECKING(for correct getpeername prototype)
@@ -269,17 +291,17 @@ PROTO1='int __fd, struct sockaddr * __addr, socklen_t * __len'
 for testproto in "${PROTO1}" 
 do
   if test "${PROTO}" = ""; then
-    AC_TRY_COMPILE([
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
       #include <sys/socket.h>
       int getpeername($testproto);
-    ],,[PROTO="$testproto";],)
+    ]], [[]])],[PROTO="$testproto";],[])
   fi
 done
 if test "${PROTO}" = ""; then
   AC_MSG_ERROR("no match found!")
 fi
 AC_MSG_RESULT([getpeername(${PROTO})])
-AC_DEFINE_UNQUOTED(GETPEERNAME_SIGNATURE, [${PROTO}])
+AC_DEFINE_UNQUOTED(GETPEERNAME_SIGNATURE, [${PROTO}],[Prototype and function header for getpeername function])
 
 dnl Find the correct getsockname prototype on this machine 
 AC_MSG_CHECKING(for correct getsockname prototype)
@@ -288,17 +310,17 @@ PROTO1='int __fd, struct sockaddr * __addr, socklen_t * __len'
 for testproto in "${PROTO1}" 
 do
   if test "${PROTO}" = ""; then
-    AC_TRY_COMPILE([
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
       #include <sys/socket.h>
       int getsockname($testproto);
-    ],,[PROTO="$testproto";],)
+    ]], [[]])],[PROTO="$testproto";],[])
   fi
 done
 if test "${PROTO}" = ""; then
   AC_MSG_ERROR("no match found!")
 fi
 AC_MSG_RESULT([getsockname(${PROTO})])
-AC_DEFINE_UNQUOTED(GETSOCKNAME_SIGNATURE, [${PROTO}])
+AC_DEFINE_UNQUOTED(GETSOCKNAME_SIGNATURE, [${PROTO}],[Prototype and function header for getsockname function])
 
 dnl Pick which of the sockaddr type arguments we need for
 dnl connect(), we need to cast one of ours to it later 
@@ -308,11 +330,12 @@ case "${PROTO}" in
       SOCKETARG="struct sockaddr_in *"
       ;;
 esac
-AC_DEFINE_UNQUOTED(CONNECT_SOCKARG, [${SOCKETARG}])
+AC_DEFINE_UNQUOTED(CONNECT_SOCKARG, [${SOCKETARG}],[The type of socket structure pointer to use to call the real connect])
 
 dnl Output the special librarys (libdl etc needed for tsocks)
 SPECIALLIBS=${LIBS}
 AC_SUBST(SPECIALLIBS)
 LIBS=${SIMPLELIBS}
 
-AC_OUTPUT(Makefile)
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

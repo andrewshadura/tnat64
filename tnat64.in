@@ -3,34 +3,34 @@
 #
 # There are three forms of usage for this script:
 #
-# /usr/bin/tnat64 program [program arguments...]
+# @bindir@/tnat64 program [program arguments...]
 #
 # This form sets the users LD_PRELOAD environment variable so that tsocks(8) 
 # will be loaded to socksify the application then executes the specified 
 # program (with the provided arguments). The following simple example might 
 # be used to telnet to www.foo.org via a tnat64.conf(5) configured socks server:
 #
-# /usr/bin/tnat64 telnet www.foo.org
+# @bindir@/tnat64 telnet www.foo.org
 #
 # The second form allows for tnat64(8) to be switched on and off for a 
 # session (that is, it adds and removes tnat64 from the LD_PRELOAD environment
 # variable). This form must be _sourced_ into the user's existing session
 # (and will only work with bourne shell users):
 #
-# . /usr/bin/tnat64 on
+# . @bindir@/tnat64 on
 # telnet www.foo.org 
-# . /usr/bin/tnat64 off
+# . @bindir@/tnat64 off
 # 
 # Or
 # 
-# source /usr/bin/tnat64 on
+# source @bindir@/tnat64 on
 # telnet www.foo.org
-# source /usr/bin/tnat64 off
+# source @bindir@/tnat64 off
 #
 # The third form creates a new shell with LD_PRELOAD set and is achieved
 # simply by running the script with no arguments 
 # 
-# /usr/bin/tnat64
+# @bindir@/tnat64
 #
 # When finished the user can simply terminate the shell with 'exit'
 # 
@@ -46,14 +46,14 @@ case "$1" in
 	on)
 		if [ -z "$LD_PRELOAD" ]
 			then
-				export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so"
+				export LD_PRELOAD="@pkglibdir@/libtnat64.so"
 			else
-				echo $LD_PRELOAD | grep -q "/usr/lib/tnat64/libtnat64\.so" || \
-				export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so $LD_PRELOAD"
+				echo $LD_PRELOAD | grep -q "@pkglibdir@/libtnat64\.so" || \
+				export LD_PRELOAD="@pkglibdir@/libtnat64.so $LD_PRELOAD"
 		fi
 	;;
 	off)
-		export LD_PRELOAD=$(echo -n $LD_PRELOAD | sed 's:/usr/lib/tnat64/libtnat64.so \?::')
+		export LD_PRELOAD=$(echo -n $LD_PRELOAD | sed 's:@pkglibdir@/libtnat64.so \?::')
 		if [ -z "$LD_PRELOAD" ]
 			then
 				unset LD_PRELOAD
@@ -68,10 +68,10 @@ case "$1" in
 	*)
 		if [ -z "$LD_PRELOAD" ]
 		then
-			export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so"
+			export LD_PRELOAD="@pkglibdir@/libtnat64.so"
 		else
-			echo $LD_PRELOAD | grep -q "/usr/lib/tnat64/libtnat64\.so" || \
-			export LD_PRELOAD="/usr/lib/tnat64/libtnat64.so $LD_PRELOAD"
+			echo $LD_PRELOAD | grep -q "@pkglibdir@/libtnat64\.so" || \
+			export LD_PRELOAD="@pkglibdir@/libtnat64.so $LD_PRELOAD"
 		fi
 
 		if [ $# = 0 ]
