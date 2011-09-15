@@ -1,13 +1,19 @@
 Quick Installation Instructions
 -------------------------------
 
-1. Unpack the archive (though if you're reading this you've already
-achieved that)
+1. Unpack the archive (though if you're reading this you've probably
+already achieved that)
 
    tar -zxvf tnat64-<version>.tar.bz2
 
-2. Run ./configure, options which might be of interest (and that are 
-   specific to tnat64 include):
+or
+
+   hg clone http://bitbucket.org/andrew_shadoura/tnat64/
+
+2. Generate config scripts by running: autoreconf --install --symlink
+
+3. Run ./configure, options which might be of interest (and that are 
+   specific to tnat64) include:
 	--disable-debug		This configuration option tells tnat64
 				to never output error messages to stderr.
 				This can also be achieved at run time
@@ -35,7 +41,7 @@ time, meaning that programs running before /usr is mounted will try to
 preload tnat64, fail to find it and die, making the machine unusable. If
 you really wish to install the library into some other path use --libdir.
 
-3. Compile the code by typing:
+4. Compile the code by typing:
 
 	make
 
@@ -43,10 +49,10 @@ This should result in the creation of the following:
 	- libtnat64.so - the libtnat64 library
 	- validateconf - a utility to verify the tnat64 configuration file
 
-4. If you experience any errors at this step and don't know how to fix
+5. If you experience any errors at this step and don't know how to fix
 them, seek help using the contacts listed on the projects homepage.
 
-5. Install the compiled library. You can skip this step if you only plan
+6. Install the compiled library. You can skip this step if you only plan
 to use the library for personal use. If you want all users on the machine
 to be able to use it however, su to root then type
 
@@ -59,19 +65,19 @@ configure.
 Note that by default the library is installed to /lib and that the
 configure --prefix is IGNORED. See above for more detail. 
 
-6. At this point you'll need to create the tnat64 configuration file.
+7. At this point you'll need to create the tnat64 configuration file.
 There are two samples provided in the build directory called
 tnat64.conf.simple.example and tnat64.conf.complex.example.
 Documentation on the configuration file format is provided in the
 tnat64.conf man page ('man tnat64.conf'). 
 
-7. Having created the tnat64.conf file you should verify it using
+8. Having created the tnat64.conf file you should verify it using
 validateconf (some detail on validateconf can be found in the tnat64.conf
 man page). Normally validateconf is run without arguments
 ('./validateconf'). Any errors which are displayed by validateconf need
 to be rectified before tnat64 will function correctly.
 
-8. You can now choose to make the library affect all users or just those
+9. You can now choose to make the library affect all users or just those
 who choose to use it. If you want users to use it themselves, they can
 simply use the tnat64(1) shell script to run programs (see 'man tnat64')
 or do the following in their shell before running applications that need
@@ -91,7 +97,6 @@ sure the directory you put the library in is in the root of the
 filesystem, if the library is not available at boot time, again, your
 machine will be UNUSABLE. 
 
-9. Go ahead and use it! At this point everything should work. Again, if
+10. Go ahead and use it! At this point everything should work. Again, if
 you experience any problems, use the contact points listed at the project's
 homepage.
-
