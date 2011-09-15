@@ -63,7 +63,6 @@ static int (*realconnect) (CONNECT_SIGNATURE);
 static int (*realgetpeername) (GETPEERNAME_SIGNATURE);
 static int (*realgetsockname) (GETSOCKNAME_SIGNATURE);
 static struct parsedfile *config;
-static struct connreq *requests = NULL;
 static int suid = 0;
 static char *conffile = NULL;
 

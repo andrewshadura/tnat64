@@ -186,7 +186,7 @@ static int handle_path(struct parsedfile *config, int lineno, int nowords, char 
     {
         /* Open up a new prefixent, put it on the list   */
         /* then set the current context                  */
-        if (((int)(newprefix = (struct prefixent *)malloc(sizeof(struct prefixent)))) == -1)
+        if ((newprefix = (struct prefixent *)malloc(sizeof(struct prefixent))) == NULL)
             exit(-1);
 
         /* Initialize the structure */
@@ -496,7 +496,6 @@ int HIDDENSYM pick_prefix(struct parsedfile *config, struct prefixent **ent, str
 
 int HIDDENSYM check_prefix(struct parsedfile *config, struct in6_addr * addr)
 {
-    char ipbuf[64];
     struct prefixent *ent;
     char addrbuffer[INET6_ADDRSTRLEN];
 
