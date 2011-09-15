@@ -23,10 +23,10 @@ tnat64.8: tnat64.8.in Makefile
 
 EXTRA_DIST = tnat64.in tnat64.8.in
 
-bin_PROGRAMS = validateconf
+bin_PROGRAMS = tnat64-validateconf
 
-validateconf_SOURCES = validateconf.c common.c parser.c
-validateconf_CFLAGS = $(AM_CFLAGS) # this renames object files
+tnat64_validateconf_SOURCES = validateconf.c common.c parser.c
+tnat64_validateconf_CFLAGS = $(AM_CFLAGS) # this renames object files
 
 pkglib_LTLIBRARIES = libtnat64.la
 
