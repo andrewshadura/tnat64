@@ -24,7 +24,7 @@
 */
 
 /* Global configuration variables */
-char *progname = "validateconf";        /* Name for error msgs      */
+char *progname = "tnat64-validateconf";        /* Name for error msgs      */
 
 /* Header Files */
 #include <config.h>

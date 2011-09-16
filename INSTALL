@@ -47,7 +47,7 @@ you really wish to install the library into some other path use --libdir.
 
 This should result in the creation of the following:
 	- libtnat64.so - the libtnat64 library
-	- validateconf - a utility to verify the tnat64 configuration file
+	- tnat64-validateconf - a utility to verify the tnat64 configuration file
 
 5. If you experience any errors at this step and don't know how to fix
 them, seek help using the contacts listed on the projects homepage.
@@ -72,10 +72,10 @@ Documentation on the configuration file format is provided in the
 tnat64.conf man page ('man tnat64.conf'). 
 
 8. Having created the tnat64.conf file you should verify it using
-validateconf (some detail on validateconf can be found in the tnat64.conf
-man page). Normally validateconf is run without arguments
-('./validateconf'). Any errors which are displayed by validateconf need
-to be rectified before tnat64 will function correctly.
+tnat64-validateconf (some detail on validateconf can be found in the
+tnat64.conf man page). Normally validateconf is run without arguments
+('./tnat64-validateconf'). Any errors which are displayed by validateconf
+need to be rectified before tnat64 will function correctly.
 
 9. You can now choose to make the library affect all users or just those
 who choose to use it. If you want users to use it themselves, they can

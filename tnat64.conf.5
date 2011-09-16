@@ -88,19 +88,19 @@ tnat64 comes with two utilities that can be useful in creating and verifying
 the tnat64 configuration file. 
 
 .TP
-validateconf
-validateconf can be used to verify the configuration file. It checks the format
+tnat64-validateconf
+tnat64-validateconf can be used to verify the configuration file. It checks the format
 of the file and also the contents for errors. Having read the file it dumps 
 the configuration to the screen in a formatted, readable manner. This can be 
 extremely useful in debugging problems.
 
-validateconf can read a configuration file from a location other than the 
+tnat64-validateconf can read a configuration file from a location other than the 
 location specified at compile time with the \-f <filename> command line 
 option.
 
-Normally validateconf simply dumps the configuration read to the screen (in
+Normally tnat64-validateconf simply dumps the configuration read to the screen (in
 a nicely readable format), however it also has a useful 'test' mode. When
-passed a hostname/ip on the command line like \-t <hostname/ip>, validateconf 
+passed a hostname/ip on the command line like \-t <hostname/ip>, tnat64-validateconf 
 determines which of the NAT64 prefixes specified in the configuration file 
 would be used by tnat64 to access the specified host. 
 
