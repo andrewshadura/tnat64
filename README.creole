@@ -1,0 +1,25 @@
+=== What is TNAT64? ===
+TNAT64 is an interceptor which redirects all of your outgoing TCPv4 connections through the NAT64, thus enabling your application to communicate to the IPv4 world on IPv6-only host even if it doesn't support IPv6 at all.
+
+TNAT64 is based on the original code of [[http://tsocks.sourceforge.net/|tsocks]].
+
+=== What is NAT64? ===
+According to Wikipædia, ‘//NAT64 is a mechanism to allow IPv6 hosts to communicate with IPv4 servers. The NAT64 server is the endpoint for at least one IPv4 address and an IPv6 network segment of 32-bits (e.g. 64:FF9B::/96). The IPv6 client embeds the IPv4 address it wishes to communicate with using these bits, and sends its packets to the resulting address. The NAT64 server then creates a NAT-mapping between the IPv6 and the IPv4 address, allowing them to communicate.//’ ~[[[http://en.wikipedia.org/wiki/NAT64|1]]]
+
+=== How does it work? ===
+From the user's point of view, the application is run by prepending its name with //tnat64//:
+{{{
+$ tnat64 some-old-application
+}}}
+
+And then magic happens: when on IPv6-only network, the application uses NAT64 facilities to contact IPv4 hosts, and when IPv6 isn't available, but IPv4 is functional, it's used. Everything happens without the need of re-configuration or, even worse, re-compilation.
+
+=== But how does it work deep inside? ===
+TNAT64 is implemented as a shared object library which is loaded into your application by means of LD_PRELOAD feature. The library intercepts certain Berkeley sockets calls (namely, [[http://linux.die.net/man/2/socket|socket(2)]] and [[http://linux.die.net/man/2/connect|connect(2)]]). When an application creates a socket of AF_INET family and SOCK_STREAM type, that is, TCPv4 socket, that call is intercepted, and AF_INET6 socket is returned instead. Following this, connect(2) call on this socket is intercepted, too. TNAT64 then decides if the destination host is reachable over IPv4, or it needs to be forwarded to the NAT64.
+
+The decision is made as follows:
+# First, the configuration file is consulted to find the appropriate NAT64 prefix. If the prefix isn't specified for the destination network, this issue is reported to the user.
+# The NAT64 destination address is constructed by appending the IPv4 destination address to the NAT64 prefix. E.g. the destination address 198.51.100.192 and the NAT64 prefix [[http://tools.ietf.org/html/rfc6052|64:ff9b::/96]] would result in the NAT64 address 64:ff9b::198.51.100.192 (or, 64:ff9b::c933:64c0, which is the very same address indeed).
+# The connection attempt is performed to that address.
+# If the connection attempt is failed because the destination network is unreachable, the IPv4-mapped IPv6 address is constructed and the connection attempt to that address is performed. These addresses have the prefix ::ffff:0:0/96 and are constructed just as described above. The connect call to this address is interpreted by the network stack the same way as if the TCPv4 connection was requested, thus connection is made over IPv4 and not IPv6. This way the host can be reached via IPv4 when IPv6 networking isn't available.
+# The next time the connection is requested, the host is contacted using the last successful method.
