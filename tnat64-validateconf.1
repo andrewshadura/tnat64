@@ -1,0 +1,22 @@
+.TH TNAT64-VALIDATECONF 1 "" "TNAT64"
+
+.SH NAME
+.BR tnat64-validateconf 
+\- validate tnat64 configuration file
+.SH SYNOPSIS
+.BR tnat64-validateconf \ [ \-f\ conffile ]\ [ \-t\ hostname/ip[:port] ]
+.SH DESCRIPTION
+.B tnat64-validateconf
+is a helper utility to validate the tnat64 configuration and optionally
+try to match a host against the rules specified in the file.
+.SH OPTIONS
+.IP \fB\-f\ conffile
+specify the location of the configuration file to parse.
+.IP \fB\-t\ hostname/ip[:port]
+host to match against rules from the configuration file. If specified, the
+utility tries to find a path to \fBhost\fR. Otherwise, prints local networks
+and the default NAT64 prefix.
+.PP
+.SH AUTHOR
+This original program was written by Shaun Clowes for \fBtsocks\fR package,
+and then modified by Andrew Shadura for \fBtnat64\fR.
