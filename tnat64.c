@@ -1,7 +1,7 @@
 /*
 
     TNAT64 - Wrapper library for redirecting IPv4 connections to NAT64
-    Copyright (C) 2011 Andrew O. Shadura
+    Copyright (C) 2011 Andrej Shadura
     Based on original code of TSOCKS, copyright (C) 2000 Shaun Clowes
 
     This program is free software; you can redistribute it and/or modify

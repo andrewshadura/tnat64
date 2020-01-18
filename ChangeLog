@@ -1,4 +1,4 @@
-2011-09-16  Andrew O. Shadoura    <bugzilla@tut.by>
+2011-09-16  Andrej Shadura    <andrew@shadura.me>
 
         * Version 0.05 released.
 
@@ -17,35 +17,35 @@
         * Rename validateconf to tnet64-validateconf and include in installation
         * Add and slightly improve README.creole
 
-2011-09-11  Andrew O. Shadura  <bugzilla@tut.by>
+2011-09-11  Andrej Shadura  <andrew@shadura.me>
 
         * Version 0.04 released.
         * The dynamic library moved into subdirectory.
         * Some minor fixes.
 
-2011-05-19  Andrew O. Shadura  <bugzilla@tut.by>
+2011-05-19  Andrej Shadura  <andrew@shadura.me>
 
         * Version 0.03 released.
         * X11 compatibility (get*name functions now work properly).
         * Crash on wrong function calls order fixed.
         * Better debug facilities.
 
-2011-04-29  Andrew O. Shadura  <bugzilla@tut.by>
+2011-04-29  Andrej Shadura  <andrew@shadura.me>
 
         * Version 0.02 released.
         * getsockname(2) and getpeername(2) are now intercepted, too;
           that improves the compatibility with some software.
         * Some bugs fixed.
 
-2011-04-19  Andrew O. Shadura  <bugzilla@tut.by>
+2011-04-19  Andrej Shadura  <andrew@shadura.me>
 
         * The first release: 0.01.
 
-2011-03-02  Andrew O. Shadura  <bugzilla@tut.by>
+2011-03-02  Andrej Shadura  <andrew@shadura.me>
 
         * Got it working!
 
-2011-03-01  Andrew O. Shadura  <bugzilla@tut.by>
+2011-03-01  Andrej Shadura  <andrew@shadura.me>
 
         * First attempt to implement NAT64 wrapper,
           tsocks code is used as a starting point.

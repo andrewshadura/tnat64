@@ -141,11 +141,11 @@ tnat64.conf(5)
 tnat64(1)
 
 .SH AUTHORS
-Andrew O. Shadura (bugzilla@tut.by),
+Andrej Shadura (andrew@shadura.me),
 Shaun Clowes (delius@progsoc.uts.edu.au)
 
 .SH COPYRIGHT
-Copyright 2011 Andrew O. Shadura
+Copyright 2011 Andrej Shadura
 
 Original tsocks manual page, copyright 2000 Shaun Clowes
 
