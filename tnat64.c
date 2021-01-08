@@ -251,12 +251,12 @@ int connect(CONNECT_SIGNATURE)
             }
             if (errno != ENETUNREACH)
             {
-                show_msg(MSGDEBUG, "Error: %d (%s)\n", errno, sys_errlist[errno]);
+                show_msg(MSGDEBUG, "Error: %d (%s)\n", errno, strerror(errno));
                 return -1;
             }
             else
             {
-                show_msg(MSGDEBUG, "Error: %d (%s)\n", errno, sys_errlist[errno]);
+                show_msg(MSGDEBUG, "Error: %d (%s)\n", errno, strerror(errno));
                 current_af = AF_INET6;
                 failed++;
             }
