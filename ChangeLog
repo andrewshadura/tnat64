@@ -1,3 +1,11 @@
+2021-10-13  Andrej Shadura    <andrew@shadura.me>
+
+        * Version 0.06 released.
+        * Use strerror() instead of sys_errlist to fix a build failure
+          with glibc 2.32 (patch by Logan Rosen).
+        * Update and reformat INSTALL instructions.
+        * Add a manpage for tnat64-validateconf.
+
 2011-09-16  Andrej Shadura    <andrew@shadura.me>
 
         * Version 0.05 released.

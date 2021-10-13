@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.68])
 
-AC_INIT([tnat64],[0.04],[],[],[http://bitbucket.org/andrew_shadoura/tnat64/])
+AC_INIT([tnat64],[0.06],[],[],[https://github.com/andrewshadura/tnat64])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([tnat64.c])
 
