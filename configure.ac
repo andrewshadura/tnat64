@@ -23,8 +23,6 @@ dnl /etc/ld.so.preload file
 test "$libdir" = "\${exec_prefix}/lib" && libdir="/lib"
 
 dnl Arguments we allow
-AC_ARG_ENABLE(debug,
-[  --disable-debug         disable ALL error messages from tsocks ])
 AC_ARG_ENABLE(oldmethod,
 [  --enable-oldmethod	   use the old method to override connect ])
 AC_ARG_ENABLE(envconf,

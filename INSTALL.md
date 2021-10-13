@@ -16,12 +16,6 @@ already achieved that):
 3. Run `./configure`, options which might be of interest (and that are 
    specific to tnat64) include:
 
-	`--disable-debug`	This configuration option tells tnat64
-				to never output error messages to stderr.
-				This can also be achieved at run time
-				by defining the environment variable
-				TSOCKS_NO_ERROR to be "yes"
-
 	`--enable-oldmethod`	This forces tnat64 not to use the
 				`RTLD_NEXT` parameter to `dlsym` to get the
 				address of the `connect()` method tnat64
