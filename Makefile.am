@@ -25,18 +25,19 @@ EXTRA_DIST = tnat64.in tnat64.8.in
 
 bin_PROGRAMS = tnat64-validateconf
 
-tnat64_validateconf_SOURCES = validateconf.c common.c parser.c
+tnat64_validateconf_SOURCES = validateconf.c common.c common.h parser.c parser.h
 tnat64_validateconf_CFLAGS = $(AM_CFLAGS) # this renames object files
 
 pkglib_LTLIBRARIES = libtnat64.la
 
-libtnat64_la_SOURCES = tnat64.c common.c parser.c
+libtnat64_la_SOURCES = tnat64.c common.c common.h parser.c parser.h
 libtnat64_la_LDFLAGS = -Wc,-nostdlib
 libtnat64_la_LIBADD = -ldl -lc
 
-man_MANS = tnat64.1 tnat64.8 tnat64.conf.5
+man_MANS = tnat64.8
+dist_man_MANS = tnat64.1 tnat64.conf.5 tnat64-validateconf.1
 
-doc_DATA = tnat64.conf.complex.example tnat64.conf.simple.example
+dist_doc_DATA = tnat64.conf.complex.example tnat64.conf.simple.example
 
 install-exec-hook:
 	cd $(DESTDIR)$(pkglibdir) && \
