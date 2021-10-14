@@ -7,7 +7,7 @@ AC_INIT([tnat64],[0.06],[],[],[https://github.com/andrewshadura/tnat64])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([tnat64.c])
 
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE([foreign dist-xz no-dist-gzip])
 LT_INIT
 AM_PROG_CC_C_O
 
