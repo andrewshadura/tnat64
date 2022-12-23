@@ -218,7 +218,7 @@ int connect(CONNECT_SIGNATURE)
     /* If we haven't initialized yet, do it now */
     get_config();
 
-    show_msg(MSGDEBUG, "Got connection request for socket %d to " "%s:%d\n", __fd, inet_ntoa(connaddr->sin_addr), connaddr->sin_port);
+    show_msg(MSGDEBUG, "Got connection request for socket %d to " "%s:%d\n", __fd, inet_ntoa(connaddr->sin_addr), ntohs(connaddr->sin_port));
 
     /* If the address is local call realconnect */
     if (!(is_local(config, &(connaddr->sin_addr))))
