@@ -345,20 +345,32 @@ int getpeername(GETPEERNAME_SIGNATURE)
     socklen_t needlen = *__len;
     socklen_t realpeerlen = sizeof(realpeer);
     int ret = realgetpeername(__fd, __addr, &needlen);
-    struct sockaddr_in * result;
+    if (ret < 0)
+    {
+        return ret;
+    }
+
     if (*__len < sizeof(struct sockaddr_in))
     {
         *__len = sizeof(struct sockaddr_in);
         errno = EINVAL;
         return -1;
     }
-    if (__addr->sa_family <= 10)
+
+    /* TODO: AF_INET6 is not necessarily 10, this debug print is wrong */
+    if (__addr->sa_family <= 10) {
         show_msg(MSGDEBUG, "Address family is %s\n", afs[__addr->sa_family]);
+    }
+
     if (__addr->sa_family == AF_INET6)
     {
         int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
+        if (ret < 0) {
+            return ret;
+        }
         if ((!memcmp(&realpeer.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realpeer.sin6_addr)))
         {
+            struct sockaddr_in * result;
             result = (struct sockaddr_in *)__addr;
             result->sin_family = AF_INET;
             result->sin_port = realpeer.sin6_port;
@@ -367,7 +379,7 @@ int getpeername(GETPEERNAME_SIGNATURE)
             return ret;
         }
     }
-return ret;
+    return ret;
 }
 
 int getsockname(GETSOCKNAME_SIGNATURE)
@@ -392,20 +404,32 @@ int getsockname(GETSOCKNAME_SIGNATURE)
     socklen_t needlen = *__len;
     socklen_t realpeerlen = sizeof(realpeer);
     int ret = realgetsockname(__fd, __addr, &needlen);
-    struct sockaddr_in * result;
+    if (ret < 0)
+    {
+        return ret;
+    }
+
     if (*__len < sizeof(struct sockaddr_in))
     {
         *__len = sizeof(struct sockaddr_in);
         errno = EINVAL;
         return -1;
     }
-    if (__addr->sa_family <= 10)
+
+    /* TODO: AF_INET6 is not necessarily 10, this debug print is wrong */
+    if (__addr->sa_family <= 10) {
         show_msg(MSGDEBUG, "Address family is %s\n", afs[__addr->sa_family]);
+    }
+
     if (__addr->sa_family == AF_INET6)
     {
         int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
+        if (ret < 0) {
+            return ret;
+        }
         if ((!memcmp(&realpeer.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realpeer.sin6_addr)))
         {
+            struct sockaddr_in * result;
             result = (struct sockaddr_in *)__addr;
             result->sin_family = AF_INET;
             result->sin_port = 0;
