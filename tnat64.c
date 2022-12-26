@@ -341,9 +341,7 @@ int getpeername(GETPEERNAME_SIGNATURE)
     get_config();
 
     show_msg(MSGDEBUG, "Got getpeername call for socket %d\n", __fd);
-    struct sockaddr_in6 realpeer;
     socklen_t needlen = *__len;
-    socklen_t realpeerlen = sizeof(realpeer);
     int ret = realgetpeername(__fd, __addr, &needlen);
     if (ret < 0)
     {
@@ -364,6 +362,8 @@ int getpeername(GETPEERNAME_SIGNATURE)
 
     if (__addr->sa_family == AF_INET6)
     {
+        struct sockaddr_in6 realpeer;
+        socklen_t realpeerlen = sizeof(realpeer);
         int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
         if (ret < 0) {
             return ret;
@@ -400,9 +400,7 @@ int getsockname(GETSOCKNAME_SIGNATURE)
     get_config();
 
     show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
-    struct sockaddr_in6 realpeer;
     socklen_t needlen = *__len;
-    socklen_t realpeerlen = sizeof(realpeer);
     int ret = realgetsockname(__fd, __addr, &needlen);
     if (ret < 0)
     {
@@ -423,17 +421,19 @@ int getsockname(GETSOCKNAME_SIGNATURE)
 
     if (__addr->sa_family == AF_INET6)
     {
-        int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
+        struct sockaddr_in6 realsock;
+        socklen_t realsocklen = sizeof(realsock);
+        int ret = realgetsockname(__fd, (struct sockaddr *)&realsock, &realsocklen);
         if (ret < 0) {
             return ret;
         }
-        if ((!memcmp(&realpeer.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realpeer.sin6_addr)))
+        if ((!memcmp(&realsock.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realsock.sin6_addr)))
         {
             struct sockaddr_in * result;
             result = (struct sockaddr_in *)__addr;
             result->sin_family = AF_INET;
-            result->sin_port = 0;
-            memset(&result->sin_addr, 0, sizeof(struct in_addr));
+            result->sin_port = realsock.sin6_port;
+            memcpy(&result->sin_addr, &realsock.sin6_addr.s6_addr[12], sizeof(struct in_addr));
             *__len = sizeof(struct sockaddr_in);
             return ret;
         }
