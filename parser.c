@@ -385,7 +385,7 @@ int HIDDENSYM make_netent(char *value, struct netent **ent)
         exit(1);
     }
 
-    show_msg(MSGDEBUG, "New network entry for %s going to 0x%08x\n", ip, *ent);
+    show_msg(MSGDEBUG, "New network entry for %s\n", ip);
 
     if (!startport)
         (*ent)->startport = 0;
