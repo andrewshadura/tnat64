@@ -196,10 +196,43 @@ void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
     struct netent *net;
 
     /* Show address */
-    if (prefix->address != NULL)
-        printf("NAT64 prefix:       %s\n", prefix->address);
-    else
+    if (prefix->address != NULL) {
+        printf("NAT64 prefix:       %s/%d\n", prefix->address, prefix->prefix_size);
+
+        char suffix_buffer[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &(prefix->suffix), suffix_buffer, sizeof(suffix_buffer));
+
+        if (strcmp(suffix_buffer, "::") != 0) {
+            printf("NAT64 suffix:       %s\n", suffix_buffer);
+
+
+            // Check if the NAT64 suffix is too large.
+            int suffix_size = 0;
+            switch(prefix->prefix_size) {
+                case 32: suffix_size = 7; break;
+                case 40: suffix_size = 6; break;
+                case 48: suffix_size = 5; break;
+                case 56: suffix_size = 4; break;
+                case 64: suffix_size = 3; break;
+            }
+
+            int suffix_used_bytes = 0;
+            for (int i = 0; i < 16; i++) {
+                if ((prefix->suffix).s6_addr[15-i] != 0) suffix_used_bytes = (i + 1);
+            }
+
+            if (suffix_used_bytes > suffix_size) {
+                fprintf(stderr, "Error: The specified NAT64 suffix (%d bytes) is larger than "
+                            "the available space inside the NAT64 prefix (%d bytes). "
+                            "The suffix will be truncated to fit. \n", suffix_used_bytes, suffix_size );
+            }
+
+        }      
+
+    }
+    else {
         printf("NAT64 prefix:       ERROR! None specified\n");
+    }
 
 
     /* If this is the default servers and it has reachnets, thats stupid */

@@ -1,4 +1,4 @@
-# This is the configuration for libtsocks (transparent socks)
+# This is the configuration for libtnat64 (transparent NAT64)
 # Lines beginning with # and blank lines are ignored
 #
 # The basic idea is to specify:
@@ -21,17 +21,18 @@ local = 10.0.0.0/255.0.0.0
 # Paths
 # For this example this machine needs to access 150.0.0.0/255.255.0.0 as 
 # well as port 80 on the network 150.1.0.0/255.255.0.0 through
-# the NAT64 with the prefix 2001:aaa:bbbb:0:ccc:616::/96
-
+# the NAT64 with the prefix 2001:aaa:bbbb:cccc::/64, 
+# using a NAT64 suffix of ::aa:bbcc (see RFC6052).
 path {
 	subnet = 150.0.0.0/255.255.0.0
 	subnet = 150.1.0.0:80/255.255.0.0
-    nat64_prefix = 2001:aaa:bbbb:0:ccc:616::
+    nat64_prefix = 2001:aaa:bbbb:cccc::/64
+    nat64_suffix = ::aa:bbcc
 }
 
 # Default NAT64 prefix
 # For connections that aren't to the local subnets or to 150.0.0.0/255.255.0.0
-# the NAT64 with the prefix 64:ff9b::/96 should be used
+# the NAT64 with the prefix 64:ff9b::/96 (with no suffix) should be used.
 
-nat64_prefix = 64:ff9b::
+nat64_prefix = 64:ff9b::/96
 
