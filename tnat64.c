@@ -175,7 +175,20 @@ int socket(SOCKET_SIGNATURE)
     }
     if ((__domain == AF_INET) && ((__type & SOCK_TYPE_MASK) == SOCK_STREAM))
     {
-        return realsocket(AF_INET6, __type, __protocol);
+        int sock = realsocket(AF_INET6, __type, __protocol);
+
+        if (sock < 0) {
+            return sock;
+        }
+
+        // Now set this IPv6 socket to allow both IPv6 and IPv4 connections. 
+        // Most OSes do that by default, but not all. 
+        int no = 0;
+        if (setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&no, sizeof(no)) < 0) {
+            show_msg(MSGDEBUG, "Failed to disable IPV6_V6ONLY for socket %d: error %d (%s)\n", sock, errno, strerror(errno));
+        }
+
+        return sock;
     }
     else
     {
