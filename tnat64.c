@@ -224,7 +224,19 @@ int connect(CONNECT_SIGNATURE)
     if (!(is_local(config, &(connaddr->sin_addr))))
     {
         show_msg(MSGDEBUG, "Connection for socket %d is local\n", __fd);
-        return realconnect(__fd, __addr, __len);
+        /* Rewrite to an IPv6 socket connect */
+        dest_address6.sin6_family = AF_INET6;
+        dest_address6.sin6_port = connaddr->sin_port;
+        dest_address6.sin6_flowinfo = 0;
+        dest_address6.sin6_scope_id = 0;
+        memcpy(&dest_address6.sin6_addr, &ipv4mapped, sizeof(struct in6_addr));
+        memcpy(&dest_address6.sin6_addr.s6_addr[NAT64PREFIXLEN], &connaddr->sin_addr, sizeof(struct in_addr));
+        if (inet_ntop(AF_INET6, &dest_address6.sin6_addr, addrbuffer, sizeof(addrbuffer)))
+        {
+            show_msg(MSGDEBUG, "Connecting to local IPv4-mapped IPv6 address %s...\n", addrbuffer);
+        }
+
+        return realconnect(__fd, (struct sockaddr *)&dest_address6, sizeof(struct sockaddr_in6));
     }
 
     /* Don't retry more than once */
