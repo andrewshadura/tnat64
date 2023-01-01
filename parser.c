@@ -385,7 +385,7 @@ int HIDDENSYM make_netent(char *value, struct netent **ent)
         exit(1);
     }
 
-    show_msg(MSGDEBUG, "New network entry for %s\n", ip);
+    show_msg(MSGDEBUG, "New network entry for %s going to 0x%08x\n", ip, *ent);
 
     if (!startport)
         (*ent)->startport = 0;
@@ -403,18 +403,34 @@ int HIDDENSYM make_netent(char *value, struct netent **ent)
         free(*ent);
         return (2);
     }
+
+    // Check if there's a dot in the subnet string.
+    if (strstr(subnet, ".") != NULL) {
+        // There's a dot, so it's a netmask like 255.255.255.0
 #ifdef HAVE_INET_ADDR
-    else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1)
-    {
+        if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1)
+        {
 #elif defined(HAVE_INET_ATON)
-    else if (!(inet_aton(subnet, &((*ent)->localnet))))
-    {
+        if (!(inet_aton(subnet, &((*ent)->localnet))))
+        {
 #endif
-        /* Badly constructed subnet */
-        free(*ent);
-        return (3);
+            /* Badly constructed subnet */
+            free(*ent);
+            return (3);
+        }
     }
-    else if (((*ent)->localip.s_addr & (*ent)->localnet.s_addr) != (*ent)->localip.s_addr)
+    else {
+        // No dot, probably a mask like /24
+        int mask_size = atoi(subnet);
+        if (mask_size < 0 || mask_size > 32) {
+            /* Bad mask */
+            free (*ent);
+            return (3);
+        }
+        (*ent)->localnet.s_addr = htonl((0xFFFFFFFFULL << (32-mask_size)) & 0xFFFFFFFFULL);
+    }
+
+    if (((*ent)->localip.s_addr & (*ent)->localnet.s_addr) != (*ent)->localip.s_addr)
     {
         /* Subnet and Ip != Ip */
         free(*ent);

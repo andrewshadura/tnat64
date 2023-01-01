@@ -12,10 +12,10 @@
 # the man pages, tnat64(8) and tnat64.conf(8)
 
 # Local networks
-# For this example this machine can directly access 192.168.0.0/255.255.255.0 
+# For this example this machine can directly access 192.168.0.0/24
 # (192.168.0.*) and 10.0.0.0/255.0.0.0 (10.*)
 
-local = 192.168.0.0/255.255.255.0
+local = 192.168.0.0/24
 local = 10.0.0.0/255.0.0.0
 
 # Paths
