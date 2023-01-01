@@ -366,44 +366,58 @@ int getpeername(GETPEERNAME_SIGNATURE)
     get_config();
 
     show_msg(MSGDEBUG, "Got getpeername call for socket %d\n", __fd);
-    socklen_t needlen = *__len;
-    int ret = realgetpeername(__fd, __addr, &needlen);
+
+    struct sockaddr_storage sockaddr_st;
+    socklen_t size = sizeof(sockaddr_st);
+
+    int ret = realgetpeername(__fd, (struct sockaddr *)&sockaddr_st, &size);
     if (ret < 0)
     {
+        // If we end up here, it's not because of a too-small buffer, 
+        // because sockaddr_storage is the largest possible one.
         return ret;
     }
 
-    if (*__len < sizeof(struct sockaddr_in))
-    {
-        *__len = sizeof(struct sockaddr_in);
-        errno = EINVAL;
-        return -1;
-    }
 
     /* TODO: AF_INET6 is not necessarily 10, this debug print is wrong */
-    if (__addr->sa_family <= 10) {
-        show_msg(MSGDEBUG, "Address family is %s\n", afs[__addr->sa_family]);
+    if (sockaddr_st.ss_family <= 10) {
+        show_msg(MSGDEBUG, "Address family is %s\n", afs[sockaddr_st.ss_family]);
     }
 
-    if (__addr->sa_family == AF_INET6)
+    if (sockaddr_st.ss_family == AF_INET6)
     {
         struct sockaddr_in6 realpeer;
         socklen_t realpeerlen = sizeof(realpeer);
-        int ret = realgetpeername(__fd, (struct sockaddr *)&realpeer, &realpeerlen);
-        if (ret < 0) {
-            return ret;
-        }
+        memcpy(&realpeer, &sockaddr_st, realpeerlen);
+
         if ((!memcmp(&realpeer.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realpeer.sin6_addr)))
         {
-            struct sockaddr_in * result;
-            result = (struct sockaddr_in *)__addr;
-            result->sin_family = AF_INET;
-            result->sin_port = realpeer.sin6_port;
-            memcpy(&result->sin_addr, &realpeer.sin6_addr.s6_addr[12], sizeof(struct in_addr));
+            struct sockaddr_in result;
+            memset(&result, 0, sizeof(result));
+
+            result.sin_family = AF_INET;
+            result.sin_port = realpeer.sin6_port;
+            memcpy(&result.sin_addr, &realpeer.sin6_addr.s6_addr[12], sizeof(struct in_addr));
+
+            // Copy up to *__len bytes into the available space.
+            memcpy(__addr, &result, *__len);
+
             *__len = sizeof(struct sockaddr_in);
             return ret;
         }
+        else {
+            // Not sure what the best data to return here would be. 
+            // This should never happen in normal operation, though. 
+            // This would only be executed if the socket was connected to an IPv6 address 
+            // that's not part of a NAT64 prefix.
+        }
     }
+
+    // Not IPv6, return original result
+    show_msg(MSGDEBUG, "Returning original values\n");
+    memcpy(__addr, &sockaddr_st, *__len);
+    *__len = size;
+
     return ret;
 }
 
@@ -415,54 +429,91 @@ int getsockname(GETSOCKNAME_SIGNATURE)
         show_msg(MSGERR, "Unresolved symbol: getsockname\n");
         return (-1);
     }
-    if (realgetpeername == NULL)
-    {
-        show_msg(MSGERR, "Unresolved symbol: getpeername\n");
-        return (-1);
-    }
 
     /* If we haven't initialized yet, do it now */
     get_config();
 
-    show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
-    socklen_t needlen = *__len;
-    int ret = realgetsockname(__fd, __addr, &needlen);
-    if (ret < 0)
-    {
-        return ret;
-    }
+    /* The software calling getsockname is expecting an IPv4 response. 
+    This means that the __addr pointer might only have space for a sockaddr_in, 
+    not for a sockaddr_in6. It's probably unreasonable to expect the calling
+    application to provide a buffer large enough for an IPv6 sockaddr_in6
+    if they're assuming they talk IPv4. So, better allocate our own buffers, temporarily. */
 
-    if (*__len < sizeof(struct sockaddr_in))
-    {
-        *__len = sizeof(struct sockaddr_in);
-        errno = EINVAL;
-        return -1;
-    }
+    show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
+
+    struct sockaddr_storage sockaddr_st;
+    socklen_t size = sizeof(sockaddr_st);
+    int ret = realgetsockname(__fd, (struct sockaddr *)&sockaddr_st, &size);
+    if (ret < 0) {
+        // If we end up here, it's not because of a too-small buffer, 
+        // because sockaddr_storage is the largest possible one.
+        return ret;
+    }   
 
     /* TODO: AF_INET6 is not necessarily 10, this debug print is wrong */
-    if (__addr->sa_family <= 10) {
-        show_msg(MSGDEBUG, "Address family is %s\n", afs[__addr->sa_family]);
+    if (sockaddr_st.ss_family <= 10) {
+        show_msg(MSGDEBUG, "Address family is %s\n", afs[sockaddr_st.ss_family]);
     }
 
-    if (__addr->sa_family == AF_INET6)
+    if (sockaddr_st.ss_family == AF_INET6)
     {
+
         struct sockaddr_in6 realsock;
         socklen_t realsocklen = sizeof(realsock);
-        int ret = realgetsockname(__fd, (struct sockaddr *)&realsock, &realsocklen);
-        if (ret < 0) {
-            return ret;
-        }
+        memcpy(&realsock, &sockaddr_st, realsocklen);
+
         if ((!memcmp(&realsock.sin6_addr, &ipv4mapped, NAT64PREFIXLEN)) || (check_prefix(config, &realsock.sin6_addr)))
         {
-            struct sockaddr_in * result;
-            result = (struct sockaddr_in *)__addr;
-            result->sin_family = AF_INET;
-            result->sin_port = realsock.sin6_port;
-            memcpy(&result->sin_addr, &realsock.sin6_addr.s6_addr[12], sizeof(struct in_addr));
+            struct sockaddr_in result;
+            memset(&result, 0, sizeof(result));
+
+            result.sin_family = AF_INET;
+            result.sin_port = realsock.sin6_port;
+            memcpy(&result.sin_addr, &realsock.sin6_addr.s6_addr[12], sizeof(struct in_addr));
+            
+            // Copy up to *__len bytes into the available space.
+            int memcpy_size = *__len;
+            if (memcpy_size > sizeof(struct sockaddr_in)) {
+                memcpy_size = sizeof(struct sockaddr_in);
+            }
+
+            memcpy(__addr, &result, memcpy_size);
             *__len = sizeof(struct sockaddr_in);
             return ret;
         }
+        else {
+            // Application called getsockname, but the socket is not listening on an IPv6-mapped address. 
+            // The socket is listening on a "real" IPv6 address. 
+            // Returning that address to the application as-is is going to cause issues. 
+            // It's probably better to make the application believe it is bound to the unspecific address, 
+            // i.e. return an IPv4 address of 0.0.0.0 in this case. 
+
+            struct sockaddr_in result; 
+            memset(&result, 0, sizeof(result));
+
+            result.sin_family = AF_INET;
+            result.sin_port = realsock.sin6_port;
+            result.sin_addr.s_addr = 0;
+
+            int memcpy_size = *__len;
+            if (memcpy_size > sizeof(struct sockaddr_in)) {
+                memcpy_size = sizeof(struct sockaddr_in);
+            }
+
+            show_msg(MSGDEBUG, "Returning fake IPv4 0.0.0.0 as sockname\n");
+
+            memcpy(__addr, &result, memcpy_size);
+            *__len = sizeof(struct sockaddr_in);
+            return ret;
+        }
+
     }
+
+    // Not IPv6, return original result
+    show_msg(MSGDEBUG, "Returning original values\n");
+    memcpy(__addr, &sockaddr_st, *__len);
+    *__len = size;
+
     return ret;
 }
 
