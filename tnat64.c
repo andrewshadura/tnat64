@@ -39,6 +39,7 @@ static const char *progname = "libtnat64";   /* Name used in err msgs    */
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/poll.h>
+#include <sys/resource.h>
 #include <string.h>
 #include <strings.h>
 #include <netinet/in.h>
@@ -70,6 +71,23 @@ static struct in6_addr ipv4mapped;
 
 static int current_af = AF_INET6;
 
+static void * socket_fd_flags = 0;
+static int socket_fd_max = 0;
+
+/* 
+ * socket_fd_flags is an array with four bits for each possible socket. 
+ * At launch, getrlimit is executed to find out the maximum number for
+ * sockets, then the array is allocated for that size. 
+ * 
+ * This array is used to store if a particular socket always was an IPv6
+ * socket or if it was "upgraded" from an IPv4 socket to an IPv6 socket. 
+ * 
+ * This is needed so that functions like getpeername know if they can return
+ * an IPv6 address to the IPv6-aware application (if the socket was opened)
+ * as an IPv6 socket, or if the application intended to open an IPv4 socket
+ * and thus expects an IPv4 peer address. 
+ */
+
 /* Exported Function Prototypes */
 void _init(void);
 int socket(SOCKET_SIGNATURE);
@@ -80,6 +98,53 @@ int getsockname(GETSOCKNAME_SIGNATURE);
 /* Private Function Prototypes */
 static int get_config();
 static int get_environment();
+
+// This flag is set if the socket was requested by the application 
+// as an IPv4 socket and we upgraded it to IPv6.
+#define TNAT_FLAG_SOCK_UPGRADED_TO_IPV6 (1 << 0)     
+#define TNAT_FLAG_UNUSED_1 (1 << 1)
+#define TNAT_FLAG_UNUSED_2 (1 << 2)
+#define TNAT_FLAG_UNUSED_3 (1 << 3)
+
+/// returns flags (up to 4 bits) for the given socket.
+int get_custom_fd_flags(int fd) {
+
+    if (socket_fd_flags == 0) return -1;
+    if (fd >= socket_fd_max) return -2;
+
+    int idx = fd/2;
+    char * arr = socket_fd_flags;
+    arr += idx;
+
+    if (fd % 2 == 0) {
+        return (*arr & 0xF0) >> 4;
+    }
+    return (*arr & 0x0F);  
+}
+
+int set_custom_fd_flags(int fd, int flags) {
+    if (socket_fd_flags == 0) return -1;
+    if (fd >= socket_fd_max) return -2;
+    // Todo: Maybe call realloc and make the buffer larger?
+    // Just in case the application called setrlimit to increase its fd limit ...
+
+    if (flags > 15 || flags < 0) return -3;
+
+    int idx = fd/2;
+    char * arr = socket_fd_flags;
+    arr += idx;
+
+    if (fd % 2 == 0) {
+        *arr = (flags << 4) | (*arr & 0x0F);
+    }
+    else {
+        *arr = (*arr & 0xF0) | flags;
+    }
+
+    return flags;
+
+
+}
 
 void _init(void)
 {
@@ -93,6 +158,23 @@ void _init(void)
 
     /* Determine the logging level */
     suid = (getuid() != geteuid());
+
+    /* We need a flag array (socket_fd_flags) to store some information
+    about each allocated socket. Check the socket limit for the process, 
+    then allocate an array. */
+
+    struct rlimit limit;
+    getrlimit(RLIMIT_NOFILE, &limit);
+    show_msg(MSGDEBUG, "Current limit: %d, max limit: %d\n", limit.rlim_cur, limit.rlim_max);
+
+    // Assuming we need four bits of information for each socket:
+    int needed_size = (limit.rlim_max / 2) + 1;
+    
+    socket_fd_max = limit.rlim_max;
+    socket_fd_flags = calloc(needed_size, 1); 
+
+    show_msg(MSGDEBUG, "Allocated flag buffer at %p with size %d (%d entries)\n", socket_fd_flags, needed_size, socket_fd_max);
+
 
 #ifndef USE_OLD_DLSYM
     realconnect = dlsym(RTLD_NEXT, "connect");
@@ -181,6 +263,13 @@ int socket(SOCKET_SIGNATURE)
             return sock;
         }
 
+        // Store the socket in our custom array so we know that that's an IPv4 
+        // socket we forcibly upgraded to IPv6. 
+        int flag_ret = set_custom_fd_flags(sock, TNAT_FLAG_SOCK_UPGRADED_TO_IPV6);
+        if (flag_ret < 0) {
+            show_msg(MSGWARN, "Setting a custom flag for the socket %d failed with error %d\n", sock, flag_ret);
+        }
+
         // Now set this IPv6 socket to allow both IPv6 and IPv4 connections. 
         // Most OSes do that by default, but not all. 
         int no = 0;
@@ -192,7 +281,14 @@ int socket(SOCKET_SIGNATURE)
     }
     else
     {
-        return realsocket(__domain, __type, __protocol);
+        int sock = realsocket(__domain, __type, __protocol);
+        if (sock >= 0) {
+            int flag_ret = set_custom_fd_flags(sock, 0);
+            if (flag_ret < 0) {
+                show_msg(MSGWARN, "Setting a custom flag for the socket %d failed with error %d\n", sock, flag_ret);
+            }
+        }
+        return sock;
     }
 }
 
@@ -218,7 +314,10 @@ int connect(CONNECT_SIGNATURE)
     connaddr = (struct sockaddr_in *)__addr;
 
     /* Get the type of the socket */
-    getsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *)&sock_type, &sock_type_len);
+    if (getsockopt(__fd, SOL_SOCKET, SO_TYPE, (void *)&sock_type, &sock_type_len) < 0) {
+        show_msg(MSGERR, "Can't figure out socket type! - error %d (%s)\n", errno, strerror(errno));
+        return (-1);
+    }
 
     /* If this isn't an INET socket for a TCP stream we can't  */
     /* handle it, just call the real connect now               */
@@ -233,23 +332,52 @@ int connect(CONNECT_SIGNATURE)
 
     show_msg(MSGDEBUG, "Got connection request for socket %d to " "%s:%d\n", __fd, inet_ntoa(connaddr->sin_addr), ntohs(connaddr->sin_port));
 
+
     /* If the address is local call realconnect */
     if (!(is_local(config, &(connaddr->sin_addr))))
     {
         show_msg(MSGDEBUG, "Connection for socket %d is local\n", __fd);
         /* Rewrite to an IPv6 socket connect */
-        dest_address6.sin6_family = AF_INET6;
-        dest_address6.sin6_port = connaddr->sin_port;
-        dest_address6.sin6_flowinfo = 0;
-        dest_address6.sin6_scope_id = 0;
-        memcpy(&dest_address6.sin6_addr, &ipv4mapped, sizeof(struct in6_addr));
-        memcpy(&dest_address6.sin6_addr.s6_addr[NAT64PREFIXLEN], &connaddr->sin_addr, sizeof(struct in_addr));
-        if (inet_ntop(AF_INET6, &dest_address6.sin6_addr, addrbuffer, sizeof(addrbuffer)))
-        {
-            show_msg(MSGDEBUG, "Connecting to local IPv4-mapped IPv6 address %s...\n", addrbuffer);
+
+        // Check if this socket can send data to IPv4 addresses or if that's disabled: 
+        int sockopt = -1;
+        socklen_t len = sizeof(sockopt);
+        if (getsockopt(__fd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&sockopt, &len) < 0) {
+            show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assume yes - error %d (%s)\n", errno, strerror(errno));
         }
 
-        return realconnect(__fd, (struct sockaddr *)&dest_address6, sizeof(struct sockaddr_in6));
+        if (sockopt != 1) {
+            // IPv6 socket supports IPv4 because the V6ONLY flag is not 1. 
+
+            dest_address6.sin6_family = AF_INET6;
+            dest_address6.sin6_port = connaddr->sin_port;
+            dest_address6.sin6_flowinfo = 0;
+            dest_address6.sin6_scope_id = 0;
+            memcpy(&dest_address6.sin6_addr, &ipv4mapped, sizeof(struct in6_addr));
+            memcpy(&dest_address6.sin6_addr.s6_addr[NAT64PREFIXLEN], &connaddr->sin_addr, sizeof(struct in_addr));
+            if (inet_ntop(AF_INET6, &dest_address6.sin6_addr, addrbuffer, sizeof(addrbuffer)))
+            {
+                show_msg(MSGDEBUG, "Connecting to local IPv4-mapped IPv6 address %s...\n", addrbuffer);
+            }
+
+            return realconnect(__fd, (struct sockaddr *)&dest_address6, sizeof(struct sockaddr_in6));
+        }
+        else {
+            show_msg(MSGWARN, "Aborting local IPv4 connection because socket doesn't support it.\n");
+
+            if (connaddr->sin_addr.s_addr == htonl(0x7f000001)) {
+                // Application wants to connect to 127.0.0.1 but the socket doesn't support IPv4 connections. 
+                // Why not try to connect to ::1 instead? Better than returning an error ...
+
+                show_msg(MSGWARN, "Trying to connect to [::1] instead of 127.0.0.1 ...\n");
+                dest_address6.sin6_family = AF_INET6;
+                dest_address6.sin6_port = connaddr->sin_port;
+                dest_address6.sin6_flowinfo = 0;
+                dest_address6.sin6_scope_id = 0;
+                inet_pton(AF_INET6, "::1", &dest_address6.sin6_addr);
+                return realconnect(__fd, (struct sockaddr *)&dest_address6, sizeof(struct sockaddr_in6));
+            }
+        }
     }
 
     /* Don't retry more than once */
@@ -324,8 +452,29 @@ int connect(CONNECT_SIGNATURE)
                 }
                 else
                 {
-                    current_af = AF_INET;
-                    failed++;
+                    // Connection to the IPv6 address failed for some reason. 
+                    // Increment the error counter
+                    failed++; 
+
+                    // Now check if the IPv6 socket allows connecting to IPv4 targets - 
+                    // if so, try to connect over IPv4.
+
+                    // If the socket does NOT support IPv4 destinations, there's
+                    // no need to try to connect to one - just return an error.
+
+                    int sockopt = -1;
+                    socklen_t len = sizeof(sockopt);
+                    if (getsockopt(__fd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&sockopt, &len) < 0) {
+                        show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assume yes - error %d (%s)\n", errno, strerror(errno));
+                    }
+
+                    if (sockopt != 1) {
+                        // IPv6 socket supports IPv4 because the V6ONLY flag is not 1. 
+                        current_af = AF_INET;
+                    }
+                    else {
+                        return -1;
+                    }
                 }
             }
 
@@ -366,6 +515,19 @@ int getpeername(GETPEERNAME_SIGNATURE)
     get_config();
 
     show_msg(MSGDEBUG, "Got getpeername call for socket %d\n", __fd);
+
+    int sock_flags = get_custom_fd_flags(__fd);
+
+    if (sock_flags < 0) {
+        show_msg(MSGERR, "Failed to query socket flags for fd %d, err=%d\n", __fd, sock_flags);
+    }
+    if (sock_flags >= 0 && (!(sock_flags & TNAT_FLAG_SOCK_UPGRADED_TO_IPV6))) {
+        // TNAT_FLAG_SOCK_UPGRADED_TO_IPV6 is not set - this means that whatever
+        // that socket is, we don't care, it's not something we need to modify.
+        // So we can call the original getpeername.
+        show_msg(MSGDEBUG, "None of our modded sockets, call real getpeername\n");
+        return realgetpeername(__fd, __addr, __len);
+    }
 
     struct sockaddr_storage sockaddr_st;
     socklen_t size = sizeof(sockaddr_st);
@@ -410,6 +572,15 @@ int getpeername(GETPEERNAME_SIGNATURE)
             // This should never happen in normal operation, though. 
             // This would only be executed if the socket was connected to an IPv6 address 
             // that's not part of a NAT64 prefix.
+
+            // Might be a useful feature for the future - if an application is connecting
+            // to a given IPv4 address but you know the server also has an IPv6 without NAT64
+            // maybe there can be config entries mapping a given IPv4 to a given IPv6 address. 
+            // Unless that's out of scope for this project ...
+
+            // For the meantime, maybe return some of the reserved IPv4's in 240/4?
+
+            show_msg(MSGWARN, "How does this happen?\n");
         }
     }
 
@@ -433,13 +604,27 @@ int getsockname(GETSOCKNAME_SIGNATURE)
     /* If we haven't initialized yet, do it now */
     get_config();
 
+    show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
+
+    int sock_flags = get_custom_fd_flags(__fd);
+
+    if (sock_flags < 0) {
+        show_msg(MSGERR, "Failed to query socket flags for fd %d, err=%d\n", __fd, sock_flags);
+    }
+    if (sock_flags >= 0 && (!(sock_flags & TNAT_FLAG_SOCK_UPGRADED_TO_IPV6))) {
+        // TNAT_FLAG_SOCK_UPGRADED_TO_IPV6 is not set - this means that whatever
+        // that socket is, we don't care, it's not something we need to modify.
+        // So we can call the original getsockname.
+        show_msg(MSGDEBUG, "None of our modded sockets, call real getsockname\n");
+        return realgetsockname(__fd, __addr, __len);
+    }
+
+
     /* The software calling getsockname is expecting an IPv4 response. 
     This means that the __addr pointer might only have space for a sockaddr_in, 
     not for a sockaddr_in6. It's probably unreasonable to expect the calling
     application to provide a buffer large enough for an IPv6 sockaddr_in6
     if they're assuming they talk IPv4. So, better allocate our own buffers, temporarily. */
-
-    show_msg(MSGDEBUG, "Got getsockname call for socket %d\n", __fd);
 
     struct sockaddr_storage sockaddr_st;
     socklen_t size = sizeof(sockaddr_st);
