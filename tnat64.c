@@ -76,8 +76,8 @@ static int socket_fd_max = 0;
 
 /* 
  * socket_fd_flags is an array with four bits for each possible socket. 
- * At launch, getrlimit is executed to find out the maximum number for
- * sockets, then the array is allocated for that size. 
+ * Upon first usage, getrlimit is executed to find out the maximum 
+ * number of sockets, then the array is allocated for that size. 
  * 
  * This array is used to store if a particular socket always was an IPv6
  * socket or if it was "upgraded" from an IPv4 socket to an IPv6 socket. 
@@ -108,9 +108,11 @@ static int get_environment();
 
 /// returns flags (up to 4 bits) for the given socket.
 int get_custom_fd_flags(int fd) {
-
-    if (socket_fd_flags == 0) return -1;
-    if (fd >= socket_fd_max) return -2;
+   
+    // Any socket that doesn't have an entry in this array
+    // can't have any flags. Same for if the array hasn't been
+    // allocated yet.
+    if (socket_fd_flags == 0 || fd >= socket_fd_max) return 0;
 
     int idx = fd/2;
     char * arr = socket_fd_flags;
@@ -122,13 +124,81 @@ int get_custom_fd_flags(int fd) {
     return (*arr & 0x0F);  
 }
 
-int set_custom_fd_flags(int fd, int flags) {
-    if (socket_fd_flags == 0) return -1;
-    if (fd >= socket_fd_max) return -2;
-    // Todo: Maybe call realloc and make the buffer larger?
-    // Just in case the application called setrlimit to increase its fd limit ...
+int allocate_or_resize_flag_array() {
+    /* We need that flag array (socket_fd_flags) to store some information
+    about each allocated socket. Check the socket limit for the process, 
+    then allocate an array. */
 
-    if (flags > 15 || flags < 0) return -3;
+    // Moving this allocation to usage time (called by set_custom_fd_flags)
+    // instead of performing it at application start means that we don't
+    // waste time and memory allocating this for IPv6-native applications
+    // that won't use the NAT64.
+    // Also, it keeps allocation and reallocation/resizing code at the same place.
+
+    struct rlimit limit;
+    getrlimit(RLIMIT_NOFILE, &limit);
+    show_msg(MSGDEBUG, "Checking file descriptor limits - current limit: %d, max limit: %d\n", limit.rlim_cur, limit.rlim_max);
+
+    int needed_size = (limit.rlim_max / 2) + 1;
+
+
+    if (socket_fd_flags == 0) {
+        // Array hasn't been allocated yet (1st call since start), allocate it.
+
+        show_msg(MSGDEBUG, "Perform initial flag array allocation (size %d bytes, %d entries)\n", needed_size, limit.rlim_max);
+        // Perform initial allocation.
+        socket_fd_flags = calloc(needed_size, 1); 
+        if (socket_fd_flags == 0) {
+            show_msg(MSGERR, "Failed to allocate buffer for the flag array - calloc returned 0!\n");
+            return (-1);
+        }
+        socket_fd_max = limit.rlim_max;
+        show_msg(MSGDEBUG, "Allocated the flag buffer to size of %d (%d entries)!\n", needed_size, limit.rlim_max);
+    }
+    else if (socket_fd_max < limit.rlim_max) {
+        show_msg(MSGDEBUG, "Perform reallocation of the flag array (old size %d entries, new size %d entries)\n", socket_fd_max, limit.rlim_max);
+        // Array is already allocated but too small, make it larger
+        void * new_allocation = realloc(socket_fd_flags, needed_size);
+        if (new_allocation == 0) {
+            show_msg(MSGERR, "Failed to re-allocate the flag buffer to new size - realloc returned 0!\n");
+            return (-1);
+        }
+        int old_size = (socket_fd_max / 2) + 1;
+
+        socket_fd_flags = new_allocation;
+        socket_fd_max = limit.rlim_max;
+
+        // Now set the new space to 0:
+        if (needed_size > old_size) {
+            memset(new_allocation + old_size, 0, needed_size - old_size);
+        }
+
+        show_msg(MSGDEBUG, "Re-allocated the flag buffer to new size of %d (%d entries)!\n", needed_size, limit.rlim_max);
+    }  
+    else {
+        show_msg(MSGDEBUG, "Array re-allocation not needed.\n");
+    }
+
+    return 0;     
+}
+
+int set_custom_fd_flags(int fd, int flags) {
+
+    if (socket_fd_flags == 0 || fd >= socket_fd_max) {
+        // If this happens, we need to allocate (or resize) the flag array.
+        allocate_or_resize_flag_array();
+    }
+
+    if (socket_fd_flags == 0 || fd >= socket_fd_max) {
+        // This should never happen, but if it does, let's not crash.
+        show_msg(MSGERR, "Allocation failed, or application used a file descriptor larger than the kernel allows - abort.\n");
+        return (-1);
+    }
+
+    if (flags > 15 || flags < 0) {
+        show_msg(MSGWARN, "Tried to set invalid flag %d for fd %d\n", flags, fd);
+        return (-2);
+    } 
 
     int idx = fd/2;
     char * arr = socket_fd_flags;
@@ -158,23 +228,6 @@ void _init(void)
 
     /* Determine the logging level */
     suid = (getuid() != geteuid());
-
-    /* We need a flag array (socket_fd_flags) to store some information
-    about each allocated socket. Check the socket limit for the process, 
-    then allocate an array. */
-
-    struct rlimit limit;
-    getrlimit(RLIMIT_NOFILE, &limit);
-    show_msg(MSGDEBUG, "Current limit: %d, max limit: %d\n", limit.rlim_cur, limit.rlim_max);
-
-    // Assuming we need four bits of information for each socket:
-    int needed_size = (limit.rlim_max / 2) + 1;
-    
-    socket_fd_max = limit.rlim_max;
-    socket_fd_flags = calloc(needed_size, 1); 
-
-    show_msg(MSGDEBUG, "Allocated flag buffer at %p with size %d (%d entries)\n", socket_fd_flags, needed_size, socket_fd_max);
-
 
 #ifndef USE_OLD_DLSYM
     realconnect = dlsym(RTLD_NEXT, "connect");
@@ -282,7 +335,8 @@ int socket(SOCKET_SIGNATURE)
     else
     {
         int sock = realsocket(__domain, __type, __protocol);
-        if (sock >= 0) {
+        if (sock >= 0 && socket_fd_flags != 0) {
+            // Only needed if we got a socket and the array is already allocated.
             int flag_ret = set_custom_fd_flags(sock, 0);
             if (flag_ret < 0) {
                 show_msg(MSGWARN, "Setting a custom flag for the socket %d failed with error %d\n", sock, flag_ret);
@@ -520,6 +574,8 @@ int getpeername(GETPEERNAME_SIGNATURE)
 
     if (sock_flags < 0) {
         show_msg(MSGERR, "Failed to query socket flags for fd %d, err=%d\n", __fd, sock_flags);
+        // Assume it's a normal socket, though this should never happen.
+        sock_flags = 0;
     }
     if (sock_flags >= 0 && (!(sock_flags & TNAT_FLAG_SOCK_UPGRADED_TO_IPV6))) {
         // TNAT_FLAG_SOCK_UPGRADED_TO_IPV6 is not set - this means that whatever
@@ -610,7 +666,10 @@ int getsockname(GETSOCKNAME_SIGNATURE)
 
     if (sock_flags < 0) {
         show_msg(MSGERR, "Failed to query socket flags for fd %d, err=%d\n", __fd, sock_flags);
+        // Assume it's a normal socket, though this should never happen.
+        sock_flags = 0;
     }
+
     if (sock_flags >= 0 && (!(sock_flags & TNAT_FLAG_SOCK_UPGRADED_TO_IPV6))) {
         // TNAT_FLAG_SOCK_UPGRADED_TO_IPV6 is not set - this means that whatever
         // that socket is, we don't care, it's not something we need to modify.
