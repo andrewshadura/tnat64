@@ -167,7 +167,7 @@ AC_EGREP_CPP(yes,
   ])    
 ])
 
-AH_TEMPLATE(ALLOW_ENV_CONFIG,[Allow TSOCKS_CONF_FILE in environment to specify config file location])
+AH_TEMPLATE(ALLOW_ENV_CONFIG,[Allow TNAT64_CONF_FILE in environment to specify config file location])
 if test "x${enable_envconf}" = "x"; then
   AC_DEFINE(ALLOW_ENV_CONFIG)
 fi
