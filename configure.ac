@@ -335,5 +335,52 @@ SPECIALLIBS=${LIBS}
 AC_SUBST(SPECIALLIBS)
 LIBS=${SIMPLELIBS}
 
+dnl Check if busybox is dynamically linked, so we might
+dnl want to fall back to it in tests
+AC_PATH_PROG(BUSYBOX, busybox, busybox)
+if test -n "$BUSYBOX"
+then
+  AC_MSG_CHECKING(if busybox dynamically linked)
+  if ldd "$BUSYBOX" 2>&1 | grep -q "not a dynamic"
+  then
+    AC_MSG_RESULT(no)
+    BUSYBOX=""
+  else
+    AC_MSG_RESULT(yes)
+  fi
+fi
+
+
+dnl See if we can run tests
+AC_CHECK_PROG(DIG, dig, dig)
+if test -z "$DIG"
+then
+  AC_CHECK_PROGS(NSLOOKUP, [host nslookup])
+fi
+
+AC_CHECK_PROGS(NETCAT, [netcat nc telnet])
+if test -z "$NETCAT"
+then
+  if test -n "$BUSYBOX"
+  then
+    AC_MSG_CHECKING(if busybox has nc applet)
+    if "$BUSYBOX" nc 2>/dev/null || test $? = 1
+    then
+      AC_MSG_RESULT(yes)
+      NETCAT="$BUSYBOX nc"
+    else
+      AC_MSG_RESULT(no)
+      AC_MSG_CHECKING(if busybox has telnet applet)
+      if "$BUSYBOX" telnet 2>/dev/null || test $? = 1
+      then
+	AC_MSG_RESULT(yes)
+	NETCAT="$BUSYBOX telnet"
+      else
+	AC_MSG_RESULT(no)
+      fi
+    fi
+  fi
+fi
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

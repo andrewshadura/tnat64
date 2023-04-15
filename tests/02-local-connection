@@ -1,0 +1,15 @@
+#!/bin/sh -e
+
+if [ -z "$NETCAT" ]
+then
+  exit 77
+fi
+
+: ${objdir:=.}
+
+TNAT64_DEBUG=10 LD_PRELOAD=$objdir/libtnat64.so $NETCAT 127.0.0.1 65535 2>&1 | awk '
+BEGIN { e = 1 }
+/Connecting to local IPv4-mapped/ { e = 0 }
+//
+END { exit e }
+'

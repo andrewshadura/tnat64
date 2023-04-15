@@ -39,6 +39,11 @@ dist_man_MANS = tnat64.1 tnat64.conf.5 tnat64-validateconf.1
 
 dist_doc_DATA = tnat64.conf.complex.example tnat64.conf.simple.example
 
+export DIG NSLOOKUP NETCAT
+
+export objdir = .libs
+TESTS = tests/01-correct-ipv6-address tests/02-local-connection
+
 install-exec-hook:
 	cd $(DESTDIR)$(pkglibdir) && \
 	 rm -f libtnat64.a && \
