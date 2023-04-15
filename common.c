@@ -18,12 +18,14 @@
 #include <netinet/in.h>
 
 /* Globals */
-int loglevel = MSGERR;          /* The default logging level is to only log
+static int loglevel = MSGERR;          /* The default logging level is to only log
                                    error messages */
-char *logfilename = NULL;       /* Name of file to which log messages should
+static char *logfilename = NULL;       /* Name of file to which log messages should
                                    be redirected */
-FILE *logfile = NULL;           /* File to which messages should be logged */
-int logstamp = 0;               /* Timestamp (and pid stamp) messages */
+static FILE *logfile = NULL;           /* File to which messages should be logged */
+static int logstamp = 0;               /* Timestamp (and pid stamp) messages */
+
+static char *logprogname = NULL;
 
 unsigned int HIDDENSYM resolve_ip(char *host, int showmsg, int allownames)
 {
@@ -67,16 +69,22 @@ unsigned int HIDDENSYM resolve_ip(char *host, int showmsg, int allownames)
 /*          MSGWARN a call to log a message of level MSGDEBUG   */
 /*          would be ignored. This can be set to -1 to disable  */
 /*          messages entirely                                   */
+/*  progname - Program name prefixed to all log messages        */
 /*  filename - This is a filename to which the messages should  */
 /*             be logged instead of to standard error           */
 /*  timestamp - This indicates that messages should be prefixed */
 /*              with timestamps (and the process id)            */
-void HIDDENSYM set_log_options(int level, char *filename, int timestamp)
+void HIDDENSYM set_log_options(int level, const char *progname, const char *filename, int timestamp)
 {
 
     loglevel = level;
     if (loglevel < MSGERR)
         loglevel = MSGNONE;
+
+    if (progname)
+    {
+        logprogname = strdup(progname);
+    }
 
     if (filename)
     {
@@ -90,7 +98,6 @@ void HIDDENSYM show_msg(int level, char *fmt, ...)
 {
     va_list ap;
     int saveerr;
-    extern char *progname;
     char timestring[20];
     time_t timestamp;
 
@@ -119,7 +126,7 @@ void HIDDENSYM show_msg(int level, char *fmt, ...)
         fprintf(logfile, "%s ", timestring);
     }
 
-    fputs(progname, logfile);
+    fputs(logprogname, logfile);
 
     if (logstamp)
     {

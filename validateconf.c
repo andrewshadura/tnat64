@@ -24,7 +24,7 @@
 */
 
 /* Global configuration variables */
-char *progname = "tnat64-validateconf";        /* Name for error msgs      */
+static const char *progname = "tnat64-validateconf";        /* Name for error msgs      */
 
 /* Header Files */
 #include <config.h>
@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
     char *testhost = NULL;
     struct parsedfile config;
     int i;
+
+    set_log_options(MSGERR, progname, NULL, 0);
 
     if ((argc > 5) || (((argc - 1) % 2) != 0))
     {

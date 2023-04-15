@@ -29,7 +29,7 @@
 #endif
 
 /* Global configuration variables */
-char *progname = "libtnat64";   /* Name used in err msgs    */
+static const char *progname = "libtnat64";   /* Name used in err msgs    */
 
 /* Header Files */
 #include <stdio.h>
@@ -124,13 +124,13 @@ static int get_environment()
 
     /* Determine the logging level */
 #ifndef ALLOW_MSG_OUTPUT
-    set_log_options(MSGNONE, NULL, 0);
+    set_log_options(MSGNONE, progname, NULL, 0);
 #else
     if ((env = getenv("TNAT64_DEBUG")))
         loglevel = atoi(env);
     if (((env = getenv("TNAT64_DEBUG_FILE"))) && !suid)
         logfilename = env;
-    set_log_options(loglevel, logfilename, 1);
+    set_log_options(loglevel, progname, logfilename, 1);
 #endif
 
     done = 1;
