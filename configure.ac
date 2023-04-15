@@ -263,6 +263,16 @@ fi
 AC_MSG_RESULT([connect(${PROTO})])
 AC_DEFINE_UNQUOTED(CONNECT_SIGNATURE, [${PROTO}],[Prototype and function header for connect function])
 
+dnl Pick which of the sockaddr type arguments we need for
+dnl connect(), we need to cast one of ours to it later 
+SOCKETARG="struct sockaddr *"
+case "${PROTO}" in
+   *sockaddr_in*)
+      SOCKETARG="struct sockaddr_in *"
+      ;;
+esac
+AC_DEFINE_UNQUOTED(CONNECT_SOCKARG, [${SOCKETARG}],[The type of socket structure pointer to use to call the real connect])
+
 dnl Find the correct socket prototype on this machine 
 AC_MSG_CHECKING(for correct socket prototype)
 PROTO=
@@ -319,16 +329,6 @@ if test "${PROTO}" = ""; then
 fi
 AC_MSG_RESULT([getsockname(${PROTO})])
 AC_DEFINE_UNQUOTED(GETSOCKNAME_SIGNATURE, [${PROTO}],[Prototype and function header for getsockname function])
-
-dnl Pick which of the sockaddr type arguments we need for
-dnl connect(), we need to cast one of ours to it later 
-SOCKETARG="struct sockaddr *"
-case "${PROTO}" in
-   *sockaddr_in*)
-      SOCKETARG="struct sockaddr_in *"
-      ;;
-esac
-AC_DEFINE_UNQUOTED(CONNECT_SOCKARG, [${SOCKETARG}],[The type of socket structure pointer to use to call the real connect])
 
 dnl Output the special librarys (libdl etc needed for tsocks)
 SPECIALLIBS=${LIBS}
