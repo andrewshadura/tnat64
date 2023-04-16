@@ -519,7 +519,7 @@ int connect(CONNECT_SIGNATURE)
                     int sockopt = -1;
                     socklen_t len = sizeof(sockopt);
                     if (getsockopt(__fd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&sockopt, &len) < 0) {
-                        show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assume yes - error %d (%s)\n", errno, strerror(errno));
+                        show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assuming it does (error %d: %s)\n", errno, strerror(errno));
                     }
 
                     if (sockopt != 1) {
