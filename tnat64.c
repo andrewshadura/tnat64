@@ -498,10 +498,12 @@ int connect(CONNECT_SIGNATURE)
 
                 if (realconnect(__fd, (struct sockaddr *)&dest_address6, sizeof(struct sockaddr_in6)) == 0)
                 {
+                    show_msg(MSGDEBUG, "Connected successfully.\n");
                     return 0;
                 }
                 if (errno != ENETUNREACH)
                 {
+                    show_msg(MSGDEBUG, "Connect failed with errno=%d\n", errno);
                     return -1;
                 }
                 else
@@ -691,6 +693,7 @@ int getsockname(GETSOCKNAME_SIGNATURE)
     if (ret < 0) {
         // If we end up here, it's not because of a too-small buffer, 
         // because sockaddr_storage is the largest possible one.
+        show_msg(MSGDEBUG, "realgetsockname(%d) returned %d\n", __fd, ret);
         return ret;
     }   
 
