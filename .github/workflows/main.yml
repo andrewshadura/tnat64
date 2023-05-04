@@ -1,0 +1,36 @@
+name: Run tests
+
+on: [push, pull_request]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run autoreconf
+      run:  autoreconf --install --symlink
+
+    - name: Run configure
+      run: ./configure
+
+    - name: Compile tnat64
+      run: make
+
+    - name: Run tests
+      run: make check
+
+    - name: Display detailed test results
+      if: always()
+      run: cat test-suite.log
+
+    - name: Upload test results artifact
+      if: always()
+      uses: actions/upload-artifact@v3
+      with: 
+        name: test-results
+        path: |
+          test-suite.log
+
+
+
