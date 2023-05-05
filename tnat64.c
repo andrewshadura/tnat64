@@ -196,6 +196,112 @@ int socket(SOCKET_SIGNATURE)
     }
 }
 
+struct in6_addr put_ipv4_into_prefix(struct prefixent *prefix, struct in_addr ipv4_address) {
+    struct in6_addr retval;
+
+    // Copy the prefix
+    memcpy(&retval, &(prefix->prefix), 16);
+
+    // Determine the suffix size from the prefix size (RFC6052, 2.2)
+    int suffix_size = 0;
+    switch (prefix->prefix_size) {
+        case 32:
+            suffix_size = 7; break;
+        case 40:
+            suffix_size = 6; break;
+        case 48:
+            suffix_size = 5; break;
+        case 56:
+            suffix_size = 4; break;
+        case 64:
+            suffix_size = 3; break;
+        case 96:
+        case 128:
+        default:
+            suffix_size = 0; break;
+    }
+
+    // Copy over the suffix:
+    for (int i = 0; i < suffix_size; i++) {
+        retval.s6_addr[15-i] = (prefix->suffix).s6_addr[15-i];
+    }
+
+    // Now add the IPv4 address at the correct location - overwriting the suffix if necessary.
+
+    switch (prefix->prefix_size) {
+        case 32:
+            memcpy(retval.s6_addr+4, &ipv4_address.s_addr, 4);
+            break;
+        case 40:
+            memcpy(retval.s6_addr+5, &ipv4_address.s_addr, 3);
+            memcpy(retval.s6_addr+9, (char *)&ipv4_address.s_addr + 3, 1);
+            break;
+        case 48:
+            memcpy(retval.s6_addr+6, &ipv4_address.s_addr, 2);
+            memcpy(retval.s6_addr+9, (char *)&ipv4_address.s_addr + 2, 2);
+            break;
+        case 56:
+            memcpy(retval.s6_addr+7, &ipv4_address.s_addr, 1);
+            memcpy(retval.s6_addr+9, (char *)&ipv4_address.s_addr + 1, 3);
+            break;
+        case 64:
+            memcpy(retval.s6_addr+9, &ipv4_address.s_addr, 4);
+            break;
+        case 96:
+            memcpy(retval.s6_addr+12, &ipv4_address.s_addr, 4);
+            break;
+        case 128:
+            // No replacement necessary, route all IPv4 packets to this IPv6 address.
+            break;
+    }
+
+    // Ensure that the 9th byte in the prefix is set to 0 as required by
+    // RFC 6052 section 2.2:
+    if (prefix->prefix_size < 128 && retval.s6_addr[8] != 0) {
+        retval.s6_addr[8] = 0;
+        if (prefix->prefix_size <= 64)
+            show_msg(MSGDEBUG, "Setting 8th bit in prefix to 0 (RFC6052 2.2)\n");
+        else
+            show_msg(MSGWARN, "Setting 8th bit in prefix to 0 (RFC6052 2.2)\n");
+    }
+
+    return retval;
+
+}
+
+struct in_addr get_ipv4_from_prefix(struct prefixent *prefix, struct in6_addr ipv6_address) {
+    struct in_addr retval = {};
+
+    switch (prefix->prefix_size) {
+        case 32:
+            memcpy(&retval.s_addr, ipv6_address.s6_addr + 4, 4);
+            return retval;
+        case 40:
+            memcpy(        &retval.s_addr,     ipv6_address.s6_addr + 5, 3);
+            memcpy((char *)&retval.s_addr + 3, ipv6_address.s6_addr + 9, 1);
+            return retval;
+        case 48:
+            memcpy(        &retval.s_addr,     ipv6_address.s6_addr + 6, 2);
+            memcpy((char *)&retval.s_addr + 2, ipv6_address.s6_addr + 9, 2);
+            return retval;
+        case 56:
+            memcpy(        &retval.s_addr,     ipv6_address.s6_addr + 7, 1);
+            memcpy((char *)&retval.s_addr + 1, ipv6_address.s6_addr + 9, 3);
+            return retval;
+        case 64:
+            memcpy(&retval.s_addr, ipv6_address.s6_addr + 9, 4);
+            return retval;
+        case 96:
+            memcpy(&retval.s_addr, ipv6_address.s6_addr + 12, 4);
+            return retval;
+        case 128:
+        default:
+            // IP unknown, just set 0.0.0.0
+            memset(&retval.s_addr, 0, 4);
+            return retval;
+    }
+}
+
 int connect(CONNECT_SIGNATURE)
 {
     struct sockaddr_in *connaddr;
@@ -307,8 +413,10 @@ int connect(CONNECT_SIGNATURE)
                 dest_address6.sin6_port = connaddr->sin_port;
                 dest_address6.sin6_flowinfo = 0;
                 dest_address6.sin6_scope_id = 0;
-                memcpy(&dest_address6.sin6_addr, &path->prefix, sizeof(struct in6_addr));
-                memcpy(&dest_address6.sin6_addr.s6_addr[12], &connaddr->sin_addr, sizeof(struct in_addr));
+
+                struct in6_addr dest = put_ipv4_into_prefix(path, connaddr->sin_addr);
+                memcpy(&dest_address6.sin6_addr, &dest, sizeof(struct in6_addr));
+
                 if (inet_ntop(AF_INET6, &dest_address6.sin6_addr, addrbuffer, sizeof(addrbuffer)))
                 {
                     show_msg(MSGDEBUG, "Trying IPv6 address %s...\n", addrbuffer);
@@ -399,7 +507,22 @@ int getpeername(GETPEERNAME_SIGNATURE)
             result = (struct sockaddr_in *)__addr;
             result->sin_family = AF_INET;
             result->sin_port = realpeer.sin6_port;
-            memcpy(&result->sin_addr, &realpeer.sin6_addr.s6_addr[12], sizeof(struct in_addr));
+
+            // Now that we're supporting different prefix lengths, we can't just take the lower 32 bits anymore. 
+            // Call check_prefix, have that return the *actual* prefix, so we know the prefix length to extract the IPv4.
+
+            struct prefixent * pfx = check_prefix(config, &realpeer.sin6_addr);
+
+            // Extract the IPv4 from that prefix.
+            if (pfx) {
+                struct in_addr ipv4 = get_ipv4_from_prefix(pfx, realpeer.sin6_addr);
+                memcpy(&result->sin_addr, &ipv4, sizeof(struct in_addr));
+            }
+            else {
+                // Can this even happen? Fallback so we don't crash.
+                memset(&result->sin_addr, 0, 4);
+            }
+
             *__len = sizeof(struct sockaddr_in);
             return ret;
         }

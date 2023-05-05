@@ -26,6 +26,7 @@ static int handle_endpath(struct parsedfile *, int, int, char *[]);
 static int handle_subnet(struct parsedfile *, int, char *);
 static int handle_local(struct parsedfile *, int, char *);
 static int handle_prefix(struct parsedfile *, int, char *);
+static int handle_suffix(struct parsedfile *, int, char *);
 static int make_netent(char *value, struct netent **ent);
 
 int HIDDENSYM read_config(char *filename, struct parsedfile *config)
@@ -126,6 +127,10 @@ static int handle_line(struct parsedfile *config, char *line, int lineno)
             {
                 handle_prefix(config, lineno, words[2]);
             }
+            else if (!strcmp(words[0], "nat64_suffix"))
+            {
+                handle_suffix(config, lineno, words[2]);
+            }
             else if (!strcmp(words[0], "local"))
             {
                 handle_local(config, lineno, words[2]);
@@ -190,7 +195,7 @@ static int handle_path(struct parsedfile *config, int lineno, int nowords, char 
             exit(-1);
 
         /* Initialize the structure */
-        show_msg(MSGDEBUG, "New prefix structure from line %d in configuration file going " "to 0x%08x\n", lineno, newprefix);
+        show_msg(MSGDEBUG, "New prefix structure from line %d in configuration file\n", lineno);
         memset(newprefix, 0x0, sizeof(*newprefix));
         newprefix->next = config->paths;
         newprefix->lineno = lineno;
@@ -213,9 +218,9 @@ static int handle_endpath(struct parsedfile *config, int lineno, int nowords, ch
         currentcontext = &(config->defaultprefix);
     }
 
-    /* We could perform some checking on the validty of data in */
-    /* the completed path here, but thats what verifyconf is    */
-    /* designed to do, no point in weighing down libtsocks      */
+    /* We could perform some checking on the validity of data   */
+    /* in the completed path here, but thats what verifyconf is */
+    /* designed to do, no point in weighing down libtnat64.     */
 
     return (0);
 }
@@ -241,8 +246,7 @@ static int handle_subnet(struct parsedfile *config, int lineno, char *value)
           return (0);
           break;
       case 4:
-          show_msg(MSGERR, "IP (%s) & ", inet_ntoa(ent->localip));
-          show_msg(MSGERR, "SUBNET (%s) != IP on line %d in " "configuration file, ignored\n", inet_ntoa(ent->localnet), lineno);
+          show_msg(MSGERR, "IP (%s) & SUBNET (%s) != IP on line %d in " "configuration file, ignored\n", inet_ntoa(ent->localip), inet_ntoa(ent->localnet), lineno);
           return (0);
           break;
       case 5:
@@ -270,7 +274,7 @@ static int handle_prefix(struct parsedfile *config, int lineno, char *value)
 {
     char *ip;
 
-    ip = strsplit(NULL, &value, " ");
+    ip = strsplit(NULL, &value, " /");
 
     if (currentcontext->address == NULL)
     {
@@ -279,6 +283,33 @@ static int handle_prefix(struct parsedfile *config, int lineno, char *value)
         {
             show_msg(MSGERR, "Cannot parse NAT64 prefix " "specified at line %d in " "configuration file\n", lineno);
         }
+        else {
+            // Check for prefix size:
+            currentcontext->prefix_size = 96;
+
+            char *prefix_size_str = strsplit(NULL, &value, " /");
+            if (prefix_size_str) {
+                int prefix_size_temp = atoi(prefix_size_str);
+                switch (prefix_size_temp) {
+                    // RFC 6052 says that only these sizes are allowed.
+                    case 32:
+                    case 40:
+                    case 48:
+                    case 56:
+                    case 64:
+                    case 96:
+                    case 128:
+                        // also allow for the case /128, in which ALL traffic (to this network)
+                        // will be sent to this single IPv6 address:
+                        currentcontext->prefix_size = prefix_size_temp;
+                        break;
+                    default:
+                        show_msg(MSGERR, "NAT64 prefix specified at " "line %d in configuration file "  "has invalid prefix size %d, assuming /96\n", lineno, prefix_size_temp);
+                        break;
+                }
+            }
+        }
+
     }
     else
     {
@@ -286,6 +317,20 @@ static int handle_prefix(struct parsedfile *config, int lineno, char *value)
             show_msg(MSGERR, "Only one default NAT64 prefix " "may be specified at line %d in " "configuration file\n", lineno);
         else
             show_msg(MSGERR, "Only one NAT64 prefix may be specified " "per path on line %d in configuration " "file. (Path begins on line %d)\n", lineno, currentcontext->lineno);
+    }
+
+    return (0);
+}
+
+static int handle_suffix(struct parsedfile *config, int lineno, char *value)
+{
+    char *ip;
+
+    ip = strsplit(NULL, &value, " ");
+
+    if (!inet_pton(AF_INET6, ip, &currentcontext->suffix))
+    {
+        show_msg(MSGERR, "Cannot parse NAT64 suffix " "specified at line %d in " "configuration file\n", lineno);
     }
 
     return (0);
@@ -318,8 +363,7 @@ static int handle_local(struct parsedfile *config, int lineno, char *value)
           return (0);
           break;
       case 4:
-          show_msg(MSGERR, "IP (%s) & ", inet_ntoa(ent->localip));
-          show_msg(MSGERR, "SUBNET (%s) != IP on line %d in " "configuration file, ignored\n", inet_ntoa(ent->localnet), lineno);
+          show_msg(MSGERR, "IP (%s) & SUBNET (%s) != IP on line %d in " "configuration file, ignored\n", inet_ntoa(ent->localip), inet_ntoa(ent->localnet), lineno);
           return (0);
       case 5:
       case 6:
@@ -403,18 +447,34 @@ int HIDDENSYM make_netent(char *value, struct netent **ent)
         free(*ent);
         return (2);
     }
+
+    // Check if there's a dot in the subnet string.
+    if (strstr(subnet, ".") != NULL) {
+        // There's a dot, so it's a netmask like 255.255.255.0
 #ifdef HAVE_INET_ADDR
-    else if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1)
-    {
+        if (((*ent)->localnet.s_addr = inet_addr(subnet)) == -1)
+        {
 #elif defined(HAVE_INET_ATON)
-    else if (!(inet_aton(subnet, &((*ent)->localnet))))
-    {
+        if (!(inet_aton(subnet, &((*ent)->localnet))))
+        {
 #endif
-        /* Badly constructed subnet */
-        free(*ent);
-        return (3);
+            /* Badly constructed subnet */
+            free(*ent);
+            return (3);
+        }
     }
-    else if (((*ent)->localip.s_addr & (*ent)->localnet.s_addr) != (*ent)->localip.s_addr)
+    else {
+        // No dot, probably a mask like /24
+        int mask_size = atoi(subnet);
+        if (mask_size < 0 || mask_size > 32) {
+            /* Bad mask */
+            free (*ent);
+            return (3);
+        }
+        (*ent)->localnet.s_addr = htonl((0xFFFFFFFFULL << (32-mask_size)) & 0xFFFFFFFFULL);
+    }
+
+    if (((*ent)->localip.s_addr & (*ent)->localnet.s_addr) != (*ent)->localip.s_addr)
     {
         /* Subnet and Ip != Ip */
         free(*ent);
@@ -472,7 +532,7 @@ int HIDDENSYM pick_prefix(struct parsedfile *config, struct prefixent **ent, str
     {
         /* Go through all the prefixes looking for one */
         /* with a path to this network                */
-        show_msg(MSGDEBUG, "Checking NAT64 prefix %s\n", ((*ent)->address ? (*ent)->address : "(No Address)"));
+        show_msg(MSGDEBUG, "Checking NAT64 prefix %s/%d\n", ((*ent)->address ? (*ent)->address : "(No Address)"), (*ent)->prefix_size);
         net = (*ent)->reachnets;
         while (net != NULL)
         {
@@ -494,7 +554,7 @@ int HIDDENSYM pick_prefix(struct parsedfile *config, struct prefixent **ent, str
     return (0);
 }
 
-int HIDDENSYM check_prefix(struct parsedfile *config, struct in6_addr * addr)
+struct prefixent * check_prefix(struct parsedfile *config, struct in6_addr * addr)
 {
     struct prefixent *ent;
     char addrbuffer[INET6_ADDRSTRLEN];
@@ -507,13 +567,14 @@ int HIDDENSYM check_prefix(struct parsedfile *config, struct in6_addr * addr)
     while (ent != NULL)
     {
         /* Go through all the prefixes */
-        show_msg(MSGDEBUG, "Checking NAT64 prefix %s\n", (ent->address ? ent->address : "(No Address)"));
+        show_msg(MSGDEBUG, "Checking NAT64 prefix %s/%d\n", (ent->address ? ent->address : "(No Address)"), ent->prefix_size);
         if ((ent->address))
         {
-            if (!memcmp(addr, &(ent->prefix), NAT64PREFIXLEN))
+            // prefix_size is in bits, divide by 8 to get bytes.
+            if (!memcmp(addr, &(ent->prefix), (ent->prefix_size / 8)))
             {
                 show_msg(MSGDEBUG, "Match!\n");
-                return 1;
+                return ent;
             }
         }
         ent = ent->next;
@@ -524,7 +585,7 @@ int HIDDENSYM check_prefix(struct parsedfile *config, struct in6_addr * addr)
     if (!memcmp(addr, &(ent->prefix), NAT64PREFIXLEN))
     {
         show_msg(MSGDEBUG, "Match!\n");
-        return 1;
+        return ent;
     }
 
     return 0;

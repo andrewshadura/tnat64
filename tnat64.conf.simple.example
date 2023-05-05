@@ -12,5 +12,5 @@
 local = 192.168.0.0/255.255.255.0
 
 # Otherwise we use the NAT64
-nat64_prefix = 64:ff9b::
+nat64_prefix = 64:ff9b::/96
 
