@@ -394,13 +394,13 @@ int connect(CONNECT_SIGNATURE)
         /* Rewrite to an IPv6 socket connect */
 
         // Check if this socket can send data to IPv4 addresses or if that's disabled: 
-        int sockopt = -1;
+        int sockopt = 0;
         socklen_t len = sizeof(sockopt);
         if (getsockopt(__fd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&sockopt, &len) < 0) {
-            show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assume yes - error %d (%s)\n", errno, strerror(errno));
+            show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assume it does - error %d (%s)\n", errno, strerror(errno));
         }
 
-        if (sockopt != 1) {
+        if (sockopt == 0) {
             // IPv6 socket supports IPv4 because the V6ONLY flag is not 1. 
 
             dest_address6.sin6_family = AF_INET6;
@@ -518,13 +518,13 @@ int connect(CONNECT_SIGNATURE)
                     // If the socket does NOT support IPv4 destinations, there's
                     // no need to try to connect to one - just return an error.
 
-                    int sockopt = -1;
+                    int sockopt = 0;
                     socklen_t len = sizeof(sockopt);
                     if (getsockopt(__fd, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&sockopt, &len) < 0) {
                         show_msg(MSGWARN, "Can't figure out if this IPv6 socket supports IPv4, assuming it does (error %d: %s)\n", errno, strerror(errno));
                     }
 
-                    if (sockopt != 1) {
+                    if (sockopt == 0) {
                         // IPv6 socket supports IPv4 because the V6ONLY flag is not 1. 
                         current_af = AF_INET;
                     }
