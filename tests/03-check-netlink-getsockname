@@ -1,0 +1,30 @@
+#!/bin/sh -e
+
+# Test for github bug #6 - ensure that NETLINK works.
+
+if [ -z "$PYTHON" ]
+then
+  exit 77
+fi
+
+: ${objdir:=.}
+
+TNAT64_DEBUG=10 LD_PRELOAD=$objdir/libtnat64.so $PYTHON << EOF
+
+import sys, socket, traceback
+
+def code():
+    sock = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW)
+    print("sock is " + str(sock))
+
+    try:
+        sockname = sock.getsockname()
+        print("Success: sockname=" + str(sockname))
+        sock.close()
+        return
+    except:
+        traceback.print_exc()
+        sys.exit(42)
+
+code()
+EOF

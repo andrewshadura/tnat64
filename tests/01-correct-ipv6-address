@@ -1,5 +1,7 @@
 #!/bin/sh -e
 
+# Test for github bug #1.
+
 if [ -z "$DIG" ] && [ -z "$NSLOOKUP" ]
 then
   exit 77
@@ -16,8 +18,8 @@ else
 fi
 
 TNAT64_DEBUG=10 LD_PRELOAD=$objdir/libtnat64.so $TOOL example.org ${P}0.0.0.0 2>&1 | awk '
-BEGIN { e = 1 }
-/Checking if IPv6 address :: is behind the NAT64.../ { e = 0 }
+BEGIN { e = 0 }
+/Checking if IPv6 address :: is behind the NAT64.../ { e = 1 }
 //
 END { exit e }
 '

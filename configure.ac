@@ -352,6 +352,9 @@ fi
 
 
 dnl See if we can run tests
+
+AC_CHECK_PROGS(PYTHON, [python3 python python2.7])
+
 AC_CHECK_PROG(DIG, dig, dig)
 if test -z "$DIG"
 then
