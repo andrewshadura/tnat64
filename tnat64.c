@@ -255,6 +255,16 @@ struct in6_addr put_ipv4_into_prefix(struct prefixent *prefix, struct in_addr ip
             break;
     }
 
+    // Ensure that the 9th byte in the prefix is set to 0 as required by
+    // RFC 6052 section 2.2:
+    if (prefix->prefix_size < 128 && retval.s6_addr[8] != 0) {
+        retval.s6_addr[8] = 0;
+        if (prefix->prefix_size <= 64)
+            show_msg(MSGDEBUG, "Setting 8th bit in prefix to 0 (RFC6052 2.2)\n");
+        else
+            show_msg(MSGWARN, "Setting 8th bit in prefix to 0 (RFC6052 2.2)\n");
+    }
+
     return retval;
 
 }

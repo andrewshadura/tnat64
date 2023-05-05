@@ -40,8 +40,8 @@ static const char *progname = "tnat64-validateconf";        /* Name for error ms
 #include <common.h>
 #include <parser.h>
 
-void show_prefix(struct parsedfile *, struct prefixent *, int);
-void show_conf(struct parsedfile *config);
+int show_prefix(struct parsedfile *, struct prefixent *, int);
+int show_conf(struct parsedfile *config);
 void test_host(struct parsedfile *config, char *);
 
 int main(int argc, char *argv[])
@@ -90,8 +90,13 @@ int main(int argc, char *argv[])
 
     /* If they specified a test host, test it, otherwise */
     /* dump the configuration                            */
-    if (!testhost)
-        show_conf(&config);
+    if (!testhost) {
+        int retval = show_conf(&config);
+        if (retval != 0) {
+            fprintf(stderr, "Found %d error(s)\n", retval);
+            exit(2);
+        }
+    }
     else
         test_host(&config, testhost);
 
@@ -147,8 +152,11 @@ void test_host(struct parsedfile *config, char *host)
     return;
 }
 
-void show_conf(struct parsedfile *config)
+int show_conf(struct parsedfile *config)
 {
+
+    int error_count = 0;
+
     struct netent *net;
     struct prefixent *prefix;
 
@@ -167,7 +175,7 @@ void show_conf(struct parsedfile *config)
     printf("=== Default NAT64 prefix configuration ===\n");
     if ((config->defaultprefix).address != NULL)
     {
-        show_prefix(config, &(config->defaultprefix), 1);
+        error_count += show_prefix(config, &(config->defaultprefix), 1);
     }
     else
     {
@@ -182,22 +190,35 @@ void show_conf(struct parsedfile *config)
         while (prefix != NULL)
         {
             printf("=== Path (line no %d in configuration file)" " ===\n", prefix->lineno);
-            show_prefix(config, prefix, 0);
+            error_count += show_prefix(config, prefix, 0);
             printf("\n");
             prefix = prefix->next;
         }
     }
 
-    return;
+    return error_count;
 }
 
-void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
+int show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
 {
+    int error_count = 0;
     struct netent *net;
 
     /* Show address */
     if (prefix->address != NULL) {
         printf("NAT64 prefix:       %s/%d\n", prefix->address, prefix->prefix_size);
+
+        if (prefix->prefix_size < 128 && (prefix->prefix).s6_addr[8] != 0) {
+            // RFC 6052 section 2.2 states that this byte in the NAT64 prefix MUST be 0.
+            show_msg(MSGERR, "NAT64 prefix specified is invalid - the 8th bit must be zero (RFC6052 2.2)\n");
+            (prefix->prefix).s6_addr[8] = 0;
+
+            char corrected_prefix_buffer[INET6_ADDRSTRLEN];
+            inet_ntop(AF_INET6, &(prefix->prefix), corrected_prefix_buffer, sizeof(corrected_prefix_buffer));
+            show_msg(MSGERR, "Corrected NAT64 prefix: %s/%d\n", corrected_prefix_buffer, prefix->prefix_size);
+
+            error_count++;
+        }
 
         char suffix_buffer[INET6_ADDRSTRLEN];
         inet_ntop(AF_INET6, &(prefix->suffix), suffix_buffer, sizeof(suffix_buffer));
@@ -218,13 +239,35 @@ void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
 
             int suffix_used_bytes = 0;
             for (int i = 0; i < 16; i++) {
-                if ((prefix->suffix).s6_addr[15-i] != 0) suffix_used_bytes = (i + 1);
+                if ((prefix->suffix).s6_addr[15-i] != 0) {
+                    suffix_used_bytes = (i + 1);
+                }
             }
 
             if (suffix_used_bytes > suffix_size) {
-                fprintf(stderr, "Error: The specified NAT64 suffix (%d bytes) is larger than "
-                            "the available space inside the NAT64 prefix (%d bytes). "
-                            "The suffix will be truncated to fit. \n", suffix_used_bytes, suffix_size );
+                // Clear all bytes inside the suffix that would overwrite
+                // bytes in the prefix.
+
+                for (int i = 0; i < (16-suffix_size); i++) {
+                    (prefix->suffix).s6_addr[i] = 0;
+                }
+
+                inet_ntop(AF_INET6, &(prefix->suffix), suffix_buffer, sizeof(suffix_buffer));
+
+                if (suffix_size > 0) {
+                    fprintf(stderr, "Error: The specified NAT64 suffix (%d bytes) is larger than "
+                                "the available space inside the NAT64 prefix (%d bytes).\n"
+                                "The suffix will be truncated to fit - new suffix: %s \n", 
+                                suffix_used_bytes, suffix_size, suffix_buffer );
+                }
+                else {
+                    fprintf(stderr, "Error: The specified NAT64 prefix size (/%d) "
+                                "does not allow for a NAT64 suffix.\n"
+                                "Please choose a different prefix or remove the suffix.\n", 
+                                prefix->prefix_size);
+                }
+
+                error_count++;
             }
 
         }      
@@ -232,6 +275,7 @@ void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
     }
     else {
         printf("NAT64 prefix:       ERROR! None specified\n");
+        error_count++;
     }
 
 
@@ -243,11 +287,13 @@ void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
             fprintf(stderr, "Error: The default NAT64 prefix has "
                     "specified networks it can be used to reach (subnet statements), "
                     "these statements are ignored since the " "default NAT64 prefix will be used for any network " "which is not specified in a subnet statement " "for other prefixes\n");
+            error_count++;
         }
     }
     else if (prefix->reachnets == NULL)
     {
         fprintf(stderr, "Error: No subnet statements specified for " "this NAT64 prefix, it will never be used\n");
+        error_count++;
     }
     else
     {
@@ -263,4 +309,6 @@ void show_prefix(struct parsedfile *config, struct prefixent *prefix, int def)
             net = net->next;
         }
     }
+
+    return error_count;
 }
